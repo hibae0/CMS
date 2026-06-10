@@ -403,9 +403,13 @@ function checkout() {
   for (const c of cart) {
     const p = products.find(x => x.id === c.id);
     if (!p || p.priceType !== "custom") continue;
-    const input = document.getElementById(`customPrice_${c.id}`);
-    const val = parseInt(input?.value) || 0;
+    // 購物車 modal 裡的 input
+    const inputInModal = document.getElementById(`customPrice_${c.id}`);
+    // 直接從 cart 物件讀取（若已存過）
+    const savedVal = c.customPrice || 0;
+    const val = parseInt(inputInModal?.value) || savedVal;
     if (val < 1) { toast(`請填寫「${p.name}」的委託金額`); return; }
+    c.customPrice = val; // 存回 cart 物件
     customTotal += val * c.qty;
   }
 

@@ -104,7 +104,10 @@ app.post("/api/create-payment", (req, res) => {
     `ItemDesc=${encodeURIComponent(itemDesc)}`,
     `Email=${encodeURIComponent(buyerEmail)}`,
     `LoginType=0`,
-    `CREDIT=1`,
+    `WEBATM=1`,
+    `VACC=1`,
+    `CVS=1`,
+    `BARCODE=1`,
     `ReturnURL=${encodeURIComponent(ReturnURL)}`,
     `NotifyURL=${encodeURIComponent(NotifyURL)}`,
   ].join("&");

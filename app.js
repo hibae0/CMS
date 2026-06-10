@@ -320,6 +320,13 @@ function renderCartModal() {
     document.getElementById("cartTotal").textContent = "";
     return;
   }
+   function saveCustomPrice(id, val) {
+  const c = cart.find(x => x.id === id);
+  if (c) {
+    c.customPrice = parseInt(val) || 0;
+    save("kc_cart", cart);
+  }
+}
   container.innerHTML = cart.map(c => {
     const p = products.find(x => x.id === c.id);
     if (!p) return "";
@@ -345,13 +352,15 @@ function renderCartModal() {
   });
   if (customItems.length > 0) {
     customArea.innerHTML = `<div style="margin-top:14px;padding:12px;background:#f8f5ff;border-radius:10px;border:1px solid #ddd4f5">
-      <p style="font-size:.8rem;color:#7c5cbf;margin-bottom:10px;font-weight:500">請填寫以下商品的委託金額（與委刖議定後填入）：</p>
+      <p style="font-size:.8rem;color:#7c5cbf;margin-bottom:10px;font-weight:500">請填寫以下商品的委託金額（與委託人議定後填入）：</p>
       ${customItems.map(c => {
         const p = products.find(x => x.id === c.id);
+        const saved = c.customPrice || "";
         return `<div style="margin-bottom:8px">
           <label style="font-size:.8rem;color:#555;display:block;margin-bottom:3px">${p.name} × ${c.qty}</label>
-          <input type="number" id="customPrice_${c.id}" placeholder="請輸入金額 (TWD)"
-            style="width:100%;border:1px solid #ddd4f5;border-radius:7px;padding:7px 10px;font-size:.88rem;outline:none"/>
+          <input type="number" id="customPrice_${c.id}" placeholder="請輸入金額 (TWD)" value="${saved}"
+            style="width:100%;border:1px solid #ddd4f5;border-radius:7px;padding:7px 10px;font-size:.88rem;outline:none"
+            oninput="saveCustomPrice('${c.id}', this.value)"/>
         </div>`;
       }).join("")}
     </div>`;

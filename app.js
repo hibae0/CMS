@@ -257,14 +257,18 @@ function saveProduct() {
   const status = document.getElementById("editProductStatus").value;
   const priceType = document.querySelector('input[name="priceType"]:checked')?.value || "fixed";
   const price  = priceType === "fixed" ? (parseInt(document.getElementById("editProductPrice").value) || 0) : 0;
+  const stock  = parseInt(document.getElementById("editProductStock").value);
+  const hasStock = !isNaN(stock) && stock >= 0;
 
   if (!name) { toast("請填寫商品名稱"); return; }
 
   if (editingProductId) {
     const idx = products.findIndex(x => x.id === editingProductId);
-    if (idx !== -1) products[idx] = { ...products[idx], name, tags, desc, img, price, priceType, status };
+    if (idx !== -1) products[idx] = { ...products[idx], name, tags, desc, img, price, priceType, status,
+      stock: hasStock ? stock : null };
   } else {
-    products.push({ id: "p" + Date.now(), name, tags, desc, img, price, priceType, status });
+    products.push({ id: "p" + Date.now(), name, tags, desc, img, price, priceType, status,
+      stock: hasStock ? stock : null });
   }
   save("kc_products", products);
   renderProducts();
@@ -290,6 +294,11 @@ function showProductDetail(id) {
 function addToCart(id) {
   const p = products.find(x => x.id === id);
   if (!p || p.status === "closed") return;
+  // 庫存檢查
+  if (p.stock !== null && p.stock !== undefined) {
+    const inCart = cart.find(c => c.id === id)?.qty || 0;
+    if (inCart >= p.stock) { toast(`「${p.name}」庫存已達上限`); return; }
+  }
   const existing = cart.find(c => c.id === id);
   if (existing) existing.qty++;
   else cart.push({ id, qty: 1, customPrice: 0 });

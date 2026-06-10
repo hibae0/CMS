@@ -10,7 +10,7 @@ const NEWEBPAY_CONFIG = {
   HashIV: "PSDQfFKgOuHSulVC",
   // 正式環境: https://core.newebpay.com/MPG/mpg_gateway
   // 測試環境: https://ccore.newebpay.com/MPG/mpg_gateway
-  gateway: "https://ccore.newebpay.com/MPG/mpg_gateway",
+  gateway: "https://core.newebpay.com/MPG/mpg_gateway",
 };
 
 // ─── 預設資料 ────────────────────────────────
@@ -438,7 +438,26 @@ function checkout() {
     `CREDIT=1`,
   ].join("&");
 
-  encryptAndSubmit(tradeParams, MerchantOrderNo, name, note);
+  // 呼叫後端 API 加密
+  fetch("/api/create-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cart, buyerName: name, buyerEmail: email, buyerNote: note, products })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { toast(data.error); return; }
+    document.getElementById("fMerchantID").value = data.MerchantID;
+    document.getElementById("fTradeInfo").value  = data.TradeInfo;
+    document.getElementById("fTradeSha").value   = data.TradeSha;
+    document.getElementById("paymentForm").action = data.gateway;
+    document.getElementById("paymentForm").submit();
+    cart = [];
+    save("kc_cart", cart);
+    updateCartCount();
+    closeModal("cartModal");
+  })
+  .catch(() => toast("付款初始化失敗，請稍後再試"));;
 }
 
 /* ─── 藍新金流 AES/SHA256 加密（前端版） ─────────

@@ -1,0 +1,177 @@
+/**
+ * KANRI COMMISSION — 後端付款伺服器
+ * 藍新金流 (Newebpay) 安全加密
+ * Node.js + Express
+ *
+ * 使用方式：
+ *   npm install
+ *   node server.js
+ *
+ * 部署建議：Render.com / Railway / Fly.io 免費方案皆可
+ */
+
+const express = require("express");
+const crypto  = require("crypto");
+const cors    = require("cors");
+const path    = require("path");
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+app.use(express.static(path.join(__dirname)));
+
+// ─── 藍新金流設定 ─────────────────────────────
+const MERCHANT_ID = "MS1833659005";
+const HASH_KEY    = "JrbUntegBSyPCnUuZUOdMBs8vwmZtJRL";
+const HASH_IV     = "PSDQfFKgOuHSulVC";
+// 測試: https://ccore.newebpay.com/MPG/mpg_gateway
+// 正式: https://core.newebpay.com/MPG/mpg_gateway
+const GATEWAY     = "https://ccore.newebpay.com/MPG/mpg_gateway";
+
+// ─── 工具函式 ──────────────────────────────────
+
+/** AES-256-CBC 加密 (PKCS7) */
+function aesEncrypt(str) {
+  const cipher = crypto.createCipheriv(
+    "aes-256-cbc",
+    Buffer.from(HASH_KEY, "utf8"),
+    Buffer.from(HASH_IV,  "utf8")
+  );
+  let encrypted = cipher.update(str, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return encrypted;
+}
+
+/** SHA256 簽章 */
+function sha256Sign(tradeInfo) {
+  const str = `HashKey=${HASH_KEY}&${tradeInfo}&HashIV=${HASH_IV}`;
+  return crypto.createHash("sha256").update(str).digest("hex").toUpperCase();
+}
+
+/** AES-256-CBC 解密（用於接收藍新回傳） */
+function aesDecrypt(encrypted) {
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    Buffer.from(HASH_KEY, "utf8"),
+    Buffer.from(HASH_IV,  "utf8")
+  );
+  decipher.setAutoPadding(false);
+  let decrypted = decipher.update(encrypted, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  // 移除 PKCS7 padding
+  const pad = decrypted.charCodeAt(decrypted.length - 1);
+  return decrypted.slice(0, decrypted.length - pad);
+}
+
+// ─── API：建立付款 ─────────────────────────────
+app.post("/api/create-payment", (req, res) => {
+  const { cart, buyerName, buyerEmail, buyerNote, products } = req.body;
+
+  if (!cart?.length || !buyerName || !buyerEmail) {
+    return res.status(400).json({ error: "缺少必要欄位" });
+  }
+
+  // 計算金額
+  const amt = cart.reduce((sum, c) => {
+    const p = products.find(x => x.id === c.id);
+    return sum + (p && p.price > 0 ? p.price * c.qty : 0);
+  }, 0);
+
+  if (amt < 1) {
+    return res.status(400).json({ error: "訂單金額不得為 0" });
+  }
+
+  const itemDesc = cart.map(c => {
+    const p = products.find(x => x.id === c.id);
+    return p ? `${p.name}x${c.qty}` : "";
+  }).filter(Boolean).join(", ").slice(0, 50);
+
+  const MerchantOrderNo = "KC" + Date.now();
+  const TimeStamp = Math.floor(Date.now() / 1000);
+
+  // 回傳 / 通知網址（部署後請換成真實域名）
+  const ReturnURL  = `${req.protocol}://${req.get("host")}/payment/return`;
+  const NotifyURL  = `${req.protocol}://${req.get("host")}/payment/notify`;
+
+  const tradeParams = [
+    `MerchantID=${MERCHANT_ID}`,
+    `RespondType=JSON`,
+    `TimeStamp=${TimeStamp}`,
+    `Version=2.0`,
+    `MerchantOrderNo=${MerchantOrderNo}`,
+    `Amt=${amt}`,
+    `ItemDesc=${encodeURIComponent(itemDesc)}`,
+    `Email=${encodeURIComponent(buyerEmail)}`,
+    `LoginType=0`,
+    `CREDIT=1`,
+    `ReturnURL=${encodeURIComponent(ReturnURL)}`,
+    `NotifyURL=${encodeURIComponent(NotifyURL)}`,
+  ].join("&");
+
+  const TradeInfo = aesEncrypt(tradeParams);
+  const TradeSha  = sha256Sign(TradeInfo);
+
+  res.json({
+    gateway:     GATEWAY,
+    MerchantID:  MERCHANT_ID,
+    TradeInfo,
+    TradeSha,
+    Version: "2.0",
+    orderNo: MerchantOrderNo,
+  });
+});
+
+// ─── 藍新回傳（前景） ──────────────────────────
+app.post("/payment/return", (req, res) => {
+  try {
+    const tradeInfo = req.body.TradeInfo;
+    const result    = JSON.parse(aesDecrypt(tradeInfo));
+    const status    = result?.Result?.RtnCode;
+    const orderNo   = result?.Result?.MerchantOrderNo;
+
+    if (status === "1") {
+      res.send(`
+        <html><head><meta charset="UTF-8">
+        <title>付款成功</title>
+        <style>body{font-family:sans-serif;text-align:center;padding:60px;color:#333}
+        h2{color:#7c5cbf}a{color:#7c5cbf}</style></head>
+        <body>
+          <h2>✓ 付款成功</h2>
+          <p>訂單編號：${orderNo}</p>
+          <p>感謝您的委託！我們將盡快與您聯繫。</p>
+          <a href="/">返回首頁</a>
+        </body></html>
+      `);
+    } else {
+      res.send(`<html><body><h2>付款失敗</h2><p>${result?.Result?.Message || ""}</p><a href="/">返回首頁</a></body></html>`);
+    }
+  } catch(e) {
+    res.send("<html><body><h2>處理付款時發生錯誤</h2><a href='/'>返回首頁</a></body></html>");
+  }
+});
+
+// ─── 藍新通知（背景） ──────────────────────────
+app.post("/payment/notify", (req, res) => {
+  try {
+    const tradeInfo = req.body.TradeInfo;
+    const result    = JSON.parse(aesDecrypt(tradeInfo));
+    console.log("📦 Newebpay Notify:", result);
+    // TODO: 在此更新資料庫訂單狀態
+    res.send("OK");
+  } catch(e) {
+    console.error("Notify error:", e);
+    res.send("ERROR");
+  }
+});
+
+// ─── 靜態首頁 ─────────────────────────────────
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`\n🎨 KANRI COMMISSION Server`);
+  console.log(`   http://localhost:${PORT}\n`);
+});

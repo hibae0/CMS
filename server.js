@@ -27,7 +27,7 @@ const HASH_KEY    = "JrbUntegBSyPCnUuZUOdMBs8vwmZtJRL";
 const HASH_IV     = "PSDQfFKgOuHSulVC";
 // 測試: https://ccore.newebpay.com/MPG/mpg_gateway
 // 正式: https://core.newebpay.com/MPG/mpg_gateway
-const GATEWAY     = "https://ccore.newebpay.com/MPG/mpg_gateway";
+const GATEWAY     = "https://core.newebpay.com/MPG/mpg_gateway";
 
 // ─── 工具函式 ──────────────────────────────────
 

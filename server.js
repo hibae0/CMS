@@ -14,24 +14,42 @@ const express = require("express");
 const crypto  = require("crypto");
 const cors    = require("cors");
 const path    = require("path");
-const fs      = require("fs");
+const { MongoClient } = require("mongodb");
 
-// ─── 資料檔案路徑 ──────────────────────────────
-const DATA_FILE = path.join(__dirname, "site-data.json");
+// ─── MongoDB 連線 ──────────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI;
+let db = null;
 
-// ─── 讀取 / 寫入資料 ──────────────────────────
-function readData() {
+async function connectDB() {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    }
-  } catch(e) { console.error("讀取資料失敗:", e.message); }
-  return null;
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    db = client.db("kanri");
+    console.log("✅ MongoDB 連線成功");
+  } catch(e) {
+    console.error("❌ MongoDB 連線失敗:", e.message);
+  }
 }
 
-function writeData(data) {
+async function readData() {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+    if (!db) return null;
+    const doc = await db.collection("sitedata").findOne({ _id: "main" });
+    return doc || null;
+  } catch(e) {
+    console.error("讀取資料失敗:", e.message);
+    return null;
+  }
+}
+
+async function writeData(data) {
+  try {
+    if (!db) return false;
+    await db.collection("sitedata").updateOne(
+      { _id: "main" },
+      { $set: { ...data, _id: "main" } },
+      { upsert: true }
+    );
     return true;
   } catch(e) {
     console.error("寫入資料失敗:", e.message);

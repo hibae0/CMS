@@ -28,7 +28,8 @@ async function connectDB() {
     db = client.db("kanri");
     console.log("✅ MongoDB 連線成功");
   } catch(e) {
-    console.error("❌ MongoDB 連線失敗:", e.message);
+    console.error("❌ MongoDB 連線失敗");
+    console.error(e);
 
   }
 }

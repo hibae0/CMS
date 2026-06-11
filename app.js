@@ -72,13 +72,22 @@ const DEFAULT_PRODUCTS = [
 let isAdmin = false;
 const ADMIN_PASSWORD = "toshine10171108";
 
-let profile  = JSON.parse(localStorage.getItem("kc_profile"))  || { ...DEFAULT_PROFILE };
-let notices  = JSON.parse(localStorage.getItem("kc_notices"))  || DEFAULT_NOTICES;
-let products = JSON.parse(localStorage.getItem("kc_products")) || DEFAULT_PRODUCTS;
-let cart     = JSON.parse(localStorage.getItem("kc_cart"))     || [];
+let profile  = { ...DEFAULT_PROFILE };
+let notices  = DEFAULT_NOTICES;
+let products = DEFAULT_PRODUCTS;
+let cart     = JSON.parse(localStorage.getItem("kc_cart")) || [];
 
-// ─── 初始化 ──────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+// ─── 初始化：從伺服器讀取資料 ─────────────────
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const res  = await fetch("/api/site-data");
+    const data = await res.json();
+    if (data.profile)  profile  = data.profile;
+    if (data.notices)  notices  = data.notices;
+    if (data.products) products = data.products;
+  } catch(e) {
+    console.warn("無法從伺服器讀取資料，使用預設值");
+  }
   renderProfile();
   renderNotices();
   renderProducts();
@@ -87,6 +96,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ─── 儲存到 localStorage ─────────────────────
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+// ─── 儲存資料到伺服器 ─────────────────────────
+async function saveToServer() {
+  try {
+    await fetch("/api/site-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile, notices, products }),
+    });
+  } catch(e) {
+    console.error("同步至伺服器失敗:", e.message);
+  }
+}
 
 // ─── PROFILE ────────────────────────────────
 function renderProfile() {
@@ -106,6 +127,7 @@ function saveProfile() {
   profile.name     = document.getElementById("editName").value.trim();
   profile.subtitle = document.getElementById("editSubtitle").value.trim();
   save("kc_profile", profile);
+  saveToServer();  
   renderProfile();
   closeModal("profileModal");
   toast("個人資訊已儲存");
@@ -157,6 +179,7 @@ function addNoticeItem() {
 }
 function saveNotices() {
   save("kc_notices", notices);
+  saveToServer();  
   renderNotices();
   closeModal("noticeModal");
   toast("公告已儲存");
@@ -271,6 +294,7 @@ function saveProduct() {
       stock: hasStock ? stock : null });
   }
   save("kc_products", products);
+  saveToServer();  
   renderProducts();
   closeModal("productModal");
   toast(editingProductId ? "商品已更新" : "商品已新增");

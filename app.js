@@ -77,16 +77,37 @@ let notices  = DEFAULT_NOTICES;
 let products = DEFAULT_PRODUCTS;
 let cart     = JSON.parse(localStorage.getItem("kc_cart")) || [];
 
-// ─── 初始化：從伺服器讀取資料 ─────────────────
+// ─── 初始化：從伺服器讀取資料，沒有則從 localStorage 搶救 ──
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     const res  = await fetch("/api/site-data");
     const data = await res.json();
-    if (data.profile)  profile  = data.profile;
-    if (data.notices)  notices  = data.notices;
-    if (data.products) products = data.products;
+
+    if (data.profile || data.notices || data.products) {
+      // 伺服器有資料，直接用
+      if (data.profile)  profile  = data.profile;
+      if (data.notices)  notices  = data.notices;
+      if (data.products) products = data.products;
+    } else {
+      // 伺服器沒資料，從 localStorage 搶救舊資料
+      const lsProfile  = localStorage.getItem("kc_profile");
+      const lsNotices  = localStorage.getItem("kc_notices");
+      const lsProducts = localStorage.getItem("kc_products");
+      if (lsProfile)  profile  = JSON.parse(lsProfile);
+      if (lsNotices)  notices  = JSON.parse(lsNotices);
+      if (lsProducts) products = JSON.parse(lsProducts);
+      // 把搶救到的資料同步存到伺服器
+      await saveToServer();
+      console.log("✅ 已將 localStorage 資料同步至伺服器");
+    }
   } catch(e) {
-    console.warn("無法從伺服器讀取資料，使用預設值");
+    console.warn("無法從伺服器讀取資料，嘗試讀取 localStorage");
+    const lsProfile  = localStorage.getItem("kc_profile");
+    const lsNotices  = localStorage.getItem("kc_notices");
+    const lsProducts = localStorage.getItem("kc_products");
+    if (lsProfile)  profile  = JSON.parse(lsProfile);
+    if (lsNotices)  notices  = JSON.parse(lsNotices);
+    if (lsProducts) products = JSON.parse(lsProducts);
   }
   renderProfile();
   renderNotices();

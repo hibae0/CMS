@@ -57,6 +57,7 @@ async function writeData(data) {
   }
 }
 
+connectDB();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -64,8 +65,8 @@ app.use(cors());
 app.use(express.static(path.join(__dirname)));
 
 // ─── API：讀取網站資料 ────────────────────────
-app.get("/api/site-data", (req, res) => {
-  const data = readData();
+app.get("/api/site-data", async (req, res) => {
+  const data = await readData();
   if (data) {
     res.json(data);
   } else {
@@ -74,10 +75,10 @@ app.get("/api/site-data", (req, res) => {
 });
 
 // ─── API：儲存網站資料 ────────────────────────
-app.post("/api/site-data", (req, res) => {
-  const current = readData() || {};
+app.post("/api/site-data", async (req, res) => {
+  const current = await readData() || {};
   const updated = { ...current, ...req.body };
-  const ok = writeData(updated);
+  const ok = await writeData(updated);
   res.json({ ok });
 });
 

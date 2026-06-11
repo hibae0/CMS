@@ -408,7 +408,7 @@ function renderCartModal() {
 
   if (customItems.length > 0) {
     customArea.innerHTML = `<div style="margin-top:14px;padding:12px;background:#f8f5ff;border-radius:10px;border:1px solid #ddd4f5">
-      <p style="font-size:.8rem;color:#7c5cbf;margin-bottom:10px;font-weight:500">請填寫以下商品的委託金額（與委託人議定後填入）：</p>
+      <p style="font-size:.8rem;color:#7c5cbf;margin-bottom:10px;font-weight:500">請填寫以下商品的委託金額（確認議定後填入）：</p>
       ${customItems.map(c => {
         const p = products.find(x => x.id === c.id);
         const saved = c.customPrice > 0 ? c.customPrice : "";

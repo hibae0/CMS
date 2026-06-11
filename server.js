@@ -14,12 +14,54 @@ const express = require("express");
 const crypto  = require("crypto");
 const cors    = require("cors");
 const path    = require("path");
+const fs      = require("fs");
+
+// ─── 資料檔案路徑 ──────────────────────────────
+const DATA_FILE = path.join(__dirname, "site-data.json");
+
+// ─── 讀取 / 寫入資料 ──────────────────────────
+function readData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      return JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+    }
+  } catch(e) { console.error("讀取資料失敗:", e.message); }
+  return null;
+}
+
+function writeData(data) {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf8");
+    return true;
+  } catch(e) {
+    console.error("寫入資料失敗:", e.message);
+    return false;
+  }
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(express.static(path.join(__dirname)));
+
+// ─── API：讀取網站資料 ────────────────────────
+app.get("/api/site-data", (req, res) => {
+  const data = readData();
+  if (data) {
+    res.json(data);
+  } else {
+    res.json({ profile: null, notices: null, products: null });
+  }
+});
+
+// ─── API：儲存網站資料 ────────────────────────
+app.post("/api/site-data", (req, res) => {
+  const current = readData() || {};
+  const updated = { ...current, ...req.body };
+  const ok = writeData(updated);
+  res.json({ ok });
+});
 
 // ─── 藍新金流設定 ─────────────────────────────
 const MERCHANT_ID = "MS1833659005";

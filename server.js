@@ -22,12 +22,14 @@ let db = null;
 
 async function connectDB() {
   try {
+    console.log("Mongo URI =", MONGODB_URI);
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     db = client.db("kanri");
     console.log("✅ MongoDB 連線成功");
   } catch(e) {
     console.error("❌ MongoDB 連線失敗:", e.message);
+
   }
 }
 

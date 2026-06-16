@@ -250,20 +250,24 @@ app.post("/payment/return", (req, res) => {
 
 // ─── 藍新通知（背景） ──────────────────────────
 app.post("/payment/notify", (req, res) => {
+  res.setHeader("Content-Type", "text/plain");
+  res.setHeader("Cache-Control", "no-store");
   try {
     const tradeInfo = req.body.TradeInfo;
     const result    = JSON.parse(aesDecrypt(tradeInfo));
     console.log("📦 Newebpay Notify:", result);
-    // TODO: 在此更新資料庫訂單狀態
-    res.send("OK");
+    res.status(200).send("OK");
   } catch(e) {
     console.error("Notify error:", e);
-    res.send("ERROR");
+    res.status(200).send("ERROR");
   }
 });
 
 // ─── 靜態首頁 ─────────────────────────────────
-app.get("*", (req, res) => {
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/payment/")) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, "index.html"));
 });
 

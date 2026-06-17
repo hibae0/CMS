@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>KANRI COMMISSION</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+TC:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
@@ -51,8 +51,10 @@
 
   <div id="homeBlockModal" class="modal hidden"><div class="modal-box large">
     <h3 id="homeBlockModalTitle">編輯區塊</h3>
+    <label>區塊 Emoji（選填，留空則無圖示）</label>
+    <input type="text" id="editBlockIcon" placeholder="例：📌 或留空"/>
     <label>區塊標題</label><input type="text" id="editBlockTitle"/>
-    <label>內容（每行一個項目，可用 ## 開頭做子標題）</label>
+    <label>內容（每行一個項目，## 開頭為子標題）</label>
     <textarea id="editBlockContent" style="min-height:180px"></textarea>
     <div class="modal-actions">
       <button onclick="saveHomeBlock()">儲存</button>
@@ -147,10 +149,11 @@
     <input type="hidden" name="Version" value="2.0"/>
   </form>
 
-  <!-- PAGE: HOME -->
+  <!-- ══ PAGE: HOME ══ -->
   <div id="page-home" class="page active">
-    <div class="home-layout">
-      <aside class="home-sidebar">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
+        <!-- Profile -->
         <div class="profile-card">
           <div class="avatar-wrap">
             <img id="avatarImg" src="" alt="Avatar"/>
@@ -159,10 +162,18 @@
           <p class="profile-subtitle" id="profileSubtitle">插畫委託</p>
           <button class="edit-btn admin-only hidden" onclick="openProfileModal()">✏ 編輯資訊</button>
         </div>
-        <div id="homeSideNotice" class="home-side-notice"></div>
+        <!-- Notice under profile -->
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">NOTICE</span>
+            <button class="edit-btn admin-only hidden" onclick="openNoticeModal('notice')">✏</button>
+          </div>
+          <div id="homeNoticeList" class="notice-list"></div>
+        </div>
       </aside>
-      <main class="home-main">
-        <div class="home-main-header">
+      <main class="right-main">
+        <div class="section-header">
           <h2 class="section-heading italic">TERMS OF SERVICE</h2>
           <button class="add-block-btn admin-only hidden" onclick="openAddHomeBlock()">＋ 新增區塊</button>
         </div>
@@ -171,16 +182,16 @@
     </div>
   </div>
 
-  <!-- PAGE: COMMISSION -->
-  <div id="page-commission" class="page hidden">
-    <div class="commission-layout">
-      <aside class="comm-sidebar">
+  <!-- ══ PAGE: COMMISSION ══ -->
+  <div id="page-commission" class="page">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
         <div class="sidebar-section">
           <div class="sidebar-label-row">
             <span class="sidebar-label italic">NOTICE</span>
             <button class="edit-btn admin-only hidden" onclick="openNoticeModal('notice')">✏</button>
           </div>
-          <div id="noticeList" class="notice-list"></div>
+          <div id="commNoticeList" class="notice-list"></div>
         </div>
         <div class="sidebar-section" style="margin-top:32px">
           <div class="sidebar-label-row">
@@ -190,17 +201,16 @@
           <div id="attenList" class="notice-list"></div>
         </div>
       </aside>
-      <main class="comm-main">
-        <section class="comm-section">
-          <div class="comm-section-header">
+      <main class="right-main">
+        <section class="content-section">
+          <div class="section-header">
             <h2 class="section-heading italic">Price &amp; Service</h2>
             <button class="add-block-btn admin-only hidden" onclick="openAddCommission()">＋ 新增項目</button>
           </div>
           <div id="commissionList" class="commission-list"></div>
         </section>
-
-        <section class="comm-section" style="margin-top:56px">
-          <div class="comm-section-header">
+        <section class="content-section" style="margin-top:56px">
+          <div class="section-header">
             <h2 class="section-heading italic">Waiting List</h2>
             <button class="add-block-btn admin-only hidden" onclick="openAddProgress()">＋ 新增進度</button>
           </div>
@@ -218,10 +228,10 @@
     </div>
   </div>
 
-  <!-- PAGE: PAYMENT -->
-  <div id="page-payment" class="page hidden">
-    <div class="payment-layout">
-      <aside class="pay-sidebar">
+  <!-- ══ PAGE: PAYMENT ══ -->
+  <div id="page-payment" class="page">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
         <div class="profile-card">
           <div class="avatar-wrap">
             <img id="avatarImg2" src="" alt="Avatar"/>
@@ -229,10 +239,11 @@
           <h2 class="profile-name" id="profileName2">KANRI</h2>
           <p class="profile-subtitle" id="profileSubtitle2">插畫委託</p>
         </div>
-        <div id="payNoticeList" class="notice-list" style="margin-top:24px"></div>
+        <div class="sidebar-divider"></div>
+        <div id="payNoticeList" class="notice-list"></div>
       </aside>
-      <main class="pay-main">
-        <div class="comm-section-header">
+      <main class="right-main">
+        <div class="section-header">
           <h2 class="section-heading italic">Price &amp; Service</h2>
         </div>
         <div id="productGrid" class="product-grid"></div>

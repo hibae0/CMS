@@ -184,6 +184,7 @@ function renderHomeBlocks() {
 function openAddHomeBlock() {
   editingHomeBlockId = null;
   document.getElementById("homeBlockModalTitle").textContent = "新增區塊";
+  document.getElementById("editBlockIcon").value = "";
   document.getElementById("editBlockTitle").value = "";
   document.getElementById("editBlockContent").value = "";
   openModal("homeBlockModal");
@@ -192,19 +193,21 @@ function openEditHomeBlock(id) {
   const b = homeBlocks.find(x => x.id===id); if (!b) return;
   editingHomeBlockId = id;
   document.getElementById("homeBlockModalTitle").textContent = "編輯區塊";
+  document.getElementById("editBlockIcon").value    = b.icon||"";
   document.getElementById("editBlockTitle").value   = b.title;
   document.getElementById("editBlockContent").value = b.content;
   openModal("homeBlockModal");
 }
 function saveHomeBlock() {
+  const icon    = document.getElementById("editBlockIcon").value.trim();
   const title   = document.getElementById("editBlockTitle").value.trim();
   const content = document.getElementById("editBlockContent").value;
   if (!title) { toast("請填寫標題"); return; }
   if (editingHomeBlockId) {
     const i = homeBlocks.findIndex(x => x.id===editingHomeBlockId);
-    if (i !== -1) homeBlocks[i] = { ...homeBlocks[i], title, content };
+    if (i !== -1) homeBlocks[i] = { ...homeBlocks[i], icon, title, content };
   } else {
-    homeBlocks.push({ id:"b"+Date.now(), icon:"📌", title, content });
+    homeBlocks.push({ id:"b"+Date.now(), icon, title, content });
   }
   renderHomeBlocks(); saveToServer(); closeModal("homeBlockModal"); toast("已儲存");
 }
@@ -225,7 +228,8 @@ function renderNoticeList(data, elId) {
     </div>`).join("");
 }
 function renderNotices() {
-  renderNoticeList(notices, "noticeList");
+  renderNoticeList(notices, "homeNoticeList");
+  renderNoticeList(notices, "commNoticeList");
   renderNoticeList(notices, "payNoticeList");
 }
 function renderAtten() { renderNoticeList(atten, "attenList"); }

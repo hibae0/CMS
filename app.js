@@ -41,11 +41,17 @@ const DEFAULT_HOME_BLOCKS = [
   },
 ];
 
-const DEFAULT_NOTICES = [
+const DEFAULT_NOTICES_HOME = [
   { id:"n1", date:"啟用藍新金流", bullets:["付款網站","已迴測試適用電腦打開"] },
   { id:"n2", date:"2026/10月與2027", bullets:["插畫委託調整成預先排單","過往委託人優先預排","每個月排 1 單","買斷委託人保留每月 1 單"] },
   { id:"n3", date:"2026/10月與2027", bullets:["模板/驚喜包委託調整","模板不定期開放（預計減少開）","過往封存版本可詢問","驚喜包可洽談","組合頁驚喜包不定期掉落","可能視排程當月份再加開"] },
   { id:"n4", date:"秋季模板製作中", bullets:[] },
+];
+const DEFAULT_NOTICES_COMM = [
+  { id:"nc1", date:"2026/10月與2027", bullets:["插畫委託調整成預先排單","過往委託人優先預排","每個月排 1 單"] },
+];
+const DEFAULT_NOTICES_PAY = [
+  { id:"np1", date:"付款注意事項", bullets:["付款後請保留收據","如有問題請來信洽詢"] },
 ];
 
 const DEFAULT_ATTEN = [
@@ -68,7 +74,9 @@ const ADMIN_PASSWORD = "toshine10171108";
 
 let profile     = { ...DEFAULT_PROFILE };
 let homeBlocks  = DEFAULT_HOME_BLOCKS;
-let notices     = DEFAULT_NOTICES;
+let noticesHome = DEFAULT_NOTICES_HOME;
+let noticesComm = DEFAULT_NOTICES_COMM;
+let noticesPay  = DEFAULT_NOTICES_PAY;
 let atten       = DEFAULT_ATTEN;
 let commissions = DEFAULT_COMMISSIONS;
 let progressList = DEFAULT_PROGRESS;
@@ -86,7 +94,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await res.json();
     if (data.profile)      profile      = data.profile;
     if (data.homeBlocks)   homeBlocks   = data.homeBlocks;
-    if (data.notices)      notices      = data.notices;
+    if (data.noticesHome) noticesHome = data.noticesHome;
+    if (data.noticesComm) noticesComm = data.noticesComm;
+    if (data.noticesPay)  noticesPay  = data.noticesPay;
     if (data.atten)        atten        = data.atten;
     if (data.commissions)  commissions  = data.commissions;
     if (data.progressList) progressList = data.progressList;
@@ -95,7 +105,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       const ls = k => { try { return JSON.parse(localStorage.getItem(k)) } catch(e){ return null } };
       if (ls("kc_profile"))  profile  = ls("kc_profile");
       if (ls("kc_products")) commissions = ls("kc_products");
-      if (ls("kc_notices"))  notices  = ls("kc_notices");
+      // migrate old single notices if present
+      if (ls("kc_noticesHome")) noticesHome = ls("kc_noticesHome");
+      if (ls("kc_noticesComm")) noticesComm = ls("kc_noticesComm");
+      if (ls("kc_noticesPay"))  noticesPay  = ls("kc_noticesPay");
+      if (ls("kc_notices") && !ls("kc_noticesHome")) noticesHome = ls("kc_notices");
       await saveToServer();
     }
   } catch(e) { console.warn("Server fetch failed, using defaults"); }
@@ -116,13 +130,32 @@ function renderAll() {
 
 async function saveToServer() {
   try {
-    await fetch("/api/site-data", {
+    const res = await fetch("/api/site-data", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ profile, homeBlocks, notices, atten, commissions, progressList }),
+      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList }),
     });
+    const data = await res.json();
+    if (!data.ok) console.warn("Server save returned not-ok");
   } catch(e) { console.error("Save failed:", e.message); }
 }
+
+// 每60秒從伺服器重新讀取，確保資料同步
+setInterval(async () => {
+  try {
+    const res  = await fetch("/api/site-data");
+    const data = await res.json();
+    if (data.profile)      profile      = data.profile;
+    if (data.homeBlocks)   homeBlocks   = data.homeBlocks;
+    if (data.noticesHome)  noticesHome  = data.noticesHome;
+    if (data.noticesComm)  noticesComm  = data.noticesComm;
+    if (data.noticesPay)   noticesPay   = data.noticesPay;
+    if (data.atten)        atten        = data.atten;
+    if (data.commissions)  commissions  = data.commissions;
+    if (data.progressList) progressList = data.progressList;
+    renderAll();
+  } catch(e) { /* silent */ }
+}, 60000);
 
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
@@ -228,16 +261,17 @@ function renderNoticeList(data, elId) {
     </div>`).join("");
 }
 function renderNotices() {
-  renderNoticeList(notices, "homeNoticeList");
-  renderNoticeList(notices, "commNoticeList");
-  renderNoticeList(notices, "payNoticeList");
+  renderNoticeList(noticesHome, "homeNoticeList");
+  renderNoticeList(noticesComm, "commNoticeList");
+  renderNoticeList(noticesPay,  "payNoticeList");
 }
 function renderAtten() { renderNoticeList(atten, "attenList"); }
 
 function openNoticeModal(type) {
-  editingNoticeType = type || "notice";
-  document.getElementById("noticeEditTitle").textContent = type==="atten" ? "編輯 ATTEN" : "編輯 NOTICE";
-  const data = type==="atten" ? atten : notices;
+  editingNoticeType = type || "home";
+  const titleMap = { home:"編輯 NOTICE（首頁）", comm:"編輯 NOTICE（委託價目）", pay:"編輯 NOTICE（付款頁）", atten:"編輯 ATTEN" };
+  document.getElementById("noticeEditTitle").textContent = titleMap[type]||"編輯 NOTICE";
+  const data = getEditingNotice();
   const container = document.getElementById("noticeEditList");
   container.innerHTML = data.map((n,i) => `
     <div class="notice-edit-item">
@@ -256,15 +290,21 @@ function openNoticeModal(type) {
     </div>`).join("");
   openModal("noticeEditModal");
 }
-function getEditingNotice() { return editingNoticeType==="atten" ? atten : notices; }
+function getEditingNotice() {
+  if (editingNoticeType==="atten") return atten;
+  if (editingNoticeType==="comm")  return noticesComm;
+  if (editingNoticeType==="pay")   return noticesPay;
+  return noticesHome;
+}
 function updateNoticeDraft(i,f,v) { getEditingNotice()[i][f]=v; }
 function updateNoticeBullet(i,j,v) { getEditingNotice()[i].bullets[j]=v; }
 function removeNoticeItem(i) { const d=getEditingNotice(); d.splice(i,1); openNoticeModal(editingNoticeType); }
 function removeBullet(i,j) { const d=getEditingNotice(); d[i].bullets.splice(j,1); openNoticeModal(editingNoticeType); }
 function addBullet(i) { const d=getEditingNotice(); d[i].bullets.push(""); openNoticeModal(editingNoticeType); }
-function addNoticeItem() { getEditingNotice().push({id:"n"+Date.now(), date:"新公告", bullets:[""]}); openNoticeModal(editingNoticeType); }
+function addNoticeItem() { getEditingNotice().push({id:"ni"+Date.now(), date:"新公告", bullets:[""]}); openNoticeModal(editingNoticeType); }
 function saveNotices() {
-  if (editingNoticeType==="atten") renderAtten(); else renderNotices();
+  if (editingNoticeType==="atten") renderAtten();
+  else renderNotices();
   saveToServer(); closeModal("noticeEditModal"); toast("已儲存");
 }
 
@@ -405,8 +445,15 @@ function queryProgress() {
   const email = document.getElementById("progressQueryEmail").value.trim().toLowerCase();
   const result = document.getElementById("progressQueryResult");
   if (!email) { result.innerHTML=`<p class="progress-empty">請輸入 Email</p>`; return; }
-  const matches = progressList.filter(p => p.email.toLowerCase()===email);
-  if (!matches.length) { result.innerHTML=`<p class="progress-empty">找不到符合的委託記錄</p>`; return; }
+  // fetch latest from server before querying
+  fetch("/api/site-data").then(r=>r.json()).then(data=>{
+    if (data.progressList) progressList = data.progressList;
+    _doQueryProgress(email, result);
+  }).catch(()=>_doQueryProgress(email, result));
+}
+function _doQueryProgress(email, result) {
+  const matches = progressList.filter(p => (p.email||"").trim().toLowerCase()===email);
+  if (!matches.length) { result.innerHTML=`<p class="progress-empty">找不到符合的委託記錄，請確認 Email 是否正確</p>`; return; }
   const payLabel = v => ({paid:"已付款",deposit:"已付訂金",outstanding:"待付款"}[v]||v);
   const statLabel = v => ({not_started:"未開始",in_progress:"進行中",completed:"已完成",paused:"暫停/取消"}[v]||v);
   const payBadge = v => ({paid:"prog-paid",deposit:"prog-deposit",outstanding:"prog-outstanding"}[v]||"prog-outstanding");

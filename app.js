@@ -9,7 +9,7 @@ const NEWEBPAY_CONFIG = {
 
 // ── DEFAULT DATA ──────────────────────────
 const DEFAULT_PROFILE = {
-  avatar: "https://i.imgur.com/lUbBaAW.png",
+  avatar: "https://i.meee.com.tw/0H4DfiU.png",
   name: "KANRI",
   subtitle: "插畫委託 / Illustration Commission",
 };
@@ -42,7 +42,7 @@ const DEFAULT_HOME_BLOCKS = [
 ];
 
 const DEFAULT_NOTICES_HOME = [
-  { id:"n1", date:"啟用藍新金流", bullets:["付款網站","已迴測試適用電腦打開"] },
+  { id:"n1", date:"｜關於此委託網站｜", bullets:["未來以此網站公告更新為主","啟用藍新金流"] },
   { id:"n2", date:"2026/10月與2027", bullets:["插畫委託調整成預先排單","過往委託人優先預排","每個月排 1 單","買斷委託人保留每月 1 單"] },
   { id:"n3", date:"2026/10月與2027", bullets:["模板/驚喜包委託調整","模板不定期開放（預計減少開）","過往封存版本可詢問","驚喜包可洽談","組合頁驚喜包不定期掉落","可能視排程當月份再加開"] },
   { id:"n4", date:"秋季模板製作中", bullets:[] },

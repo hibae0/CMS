@@ -201,12 +201,13 @@ app.post("/payment/return", (req, res) => {
   }
 });
 
-// ── 藍新通知（背景）──────────────────────────
+// ─── 藍新通知（背景） ──────────────────────────
 app.post("/payment/notify", (req, res) => {
-  res.setHeader("Content-Type","text/plain");
-  res.setHeader("Cache-Control","no-store");
+  res.setHeader("Content-Type", "text/plain");
+  res.setHeader("Cache-Control", "no-store");
   try {
-    const result = JSON.parse(aesDecrypt(req.body.TradeInfo));
+    const tradeInfo = req.body.TradeInfo;
+    const result    = JSON.parse(aesDecrypt(tradeInfo));
     console.log("📦 Newebpay Notify:", result);
     res.status(200).send("OK");
   } catch(e) {
@@ -215,9 +216,11 @@ app.post("/payment/notify", (req, res) => {
   }
 });
 
-// ── 靜態首頁 ─────────────────────────────────
+// ─── 靜態首頁 ─────────────────────────────────
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith("/api/") || req.path.startsWith("/payment/")) return next();
+  if (req.path.startsWith("/api/") || req.path.startsWith("/payment/")) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, "index.html"));
 });
 

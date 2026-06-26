@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KANRI COMMISSION</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♥</text></svg>"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="logo" href="#" onclick="showPage('home');return false">KANRI COMMISSION</a>
+      <nav class="main-nav">
+        <button class="nav-btn active" data-page="home" onclick="showPage('home')">首頁</button>
+        <button class="nav-btn" data-page="commission" onclick="showPage('commission')">委託價目 &amp; 進度</button>
+        <button class="nav-btn" data-page="payment" onclick="showPage('payment')">付款</button>
+      </nav>
+      <div class="header-right">
+        <button class="cart-btn" onclick="openCart()">
+          <span class="cart-icon">◈</span>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+        <button class="admin-btn" id="adminToggleBtn" onclick="toggleAdmin()">管理</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MODALS -->
+  <!-- Social Links Modal -->
+  <div id="socialModal" class="modal hidden"><div class="modal-box large">
+    <h3>編輯社群連結</h3>
+    <div id="socialEditList"></div>
+    <button class="add-btn" onclick="addSocialItem()">＋ 新增連結</button>
+    <div class="modal-actions">
+      <button onclick="saveSocials()">儲存</button>
+      <button class="secondary" onclick="closeModal('socialModal')">取消</button>
+    </div>
+  </div></div>
+
+  <!-- Connect Section Modal -->
+  <div id="connectModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="connectModalTitle">編輯 CONNECT 區塊</h3>
+    <label>區塊標題</label><input type="text" id="editConnectTitle"/>
+    <label>內容（每行一個項目，## 開頭為子標題，--- 為分隔線）</label>
+    <textarea id="editConnectContent" style="min-height:220px"></textarea>
+    <div class="modal-actions">
+      <button onclick="saveConnectBlock()">儲存</button>
+      <button class="secondary" onclick="closeModal('connectModal')">取消</button>
+    </div>
+  </div></div>
+
+
+  <div id="adminModal" class="modal hidden"><div class="modal-box">
+    <h3>管理員登入</h3>
+    <input type="password" id="adminPasswordInput" placeholder="輸入密碼"/>
+    <div class="modal-actions">
+      <button onclick="checkAdminPassword()">確認</button>
+      <button class="secondary" onclick="closeModal('adminModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="profileModal" class="modal hidden"><div class="modal-box large">
+    <h3>編輯個人資訊</h3>
+    <label>頭像網址</label><input type="text" id="editAvatar" placeholder="https://..."/>
+    <label>名稱</label><input type="text" id="editName"/>
+    <label>副標</label><input type="text" id="editSubtitle"/>
+    <div class="modal-actions">
+      <button onclick="saveProfile()">儲存</button>
+      <button class="secondary" onclick="closeModal('profileModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="homeBlockModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="homeBlockModalTitle">編輯區塊</h3>
+    <label>區塊 Emoji（選填，留空則無圖示）</label>
+    <input type="text" id="editBlockIcon" placeholder="例：📌 或留空"/>
+    <label>區塊標題</label><input type="text" id="editBlockTitle"/>
+    <label>內容（每行一個項目，## 開頭為子標題）</label>
+    <textarea id="editBlockContent" style="min-height:180px"></textarea>
+    <div class="modal-actions">
+      <button onclick="saveHomeBlock()">儲存</button>
+      <button class="secondary" onclick="closeModal('homeBlockModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="noticeEditModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="noticeEditTitle">編輯公告</h3>
+    <div id="noticeEditList"></div>
+    <button class="add-btn" onclick="addNoticeItem()">＋ 新增公告</button>
+    <div class="modal-actions">
+      <button onclick="saveNotices()">儲存</button>
+      <button class="secondary" onclick="closeModal('noticeEditModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="commissionModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="commissionModalTitle">新增委託項目</h3>
+    <label>項目名稱</label><input type="text" id="editCommName"/>
+    <label>標籤（逗號分隔）</label><input type="text" id="editCommTags" placeholder="插畫, 委託"/>
+    <label>簡短說明</label><input type="text" id="editCommSummary"/>
+    <label>詳細內容（每行一條）</label>
+    <textarea id="editCommDetail" style="min-height:120px"></textarea>
+    <label>作品圖片（最多4張，第一張為封面）</label>
+    <input type="text" id="editCommImg0" placeholder="第 1 張圖片網址（封面）"/>
+    <input type="text" id="editCommImg1" placeholder="第 2 張圖片網址（選填）" style="margin-top:6px"/>
+    <input type="text" id="editCommImg2" placeholder="第 3 張圖片網址（選填）" style="margin-top:6px"/>
+    <input type="text" id="editCommImg3" placeholder="第 4 張圖片網址（選填）" style="margin-top:6px"/>
+    <label>金額類型</label>
+    <div style="display:flex;gap:14px;margin:6px 0 4px">
+      <label style="margin:0;display:flex;align-items:center;gap:6px;font-size:.85rem"><input type="radio" name="commPriceType" value="fixed" id="cpFixed" checked onchange="toggleCommPrice(this.value)"> 固定金額</label>
+      <label style="margin:0;display:flex;align-items:center;gap:6px;font-size:.85rem"><input type="radio" name="commPriceType" value="negotiate" id="cpNegotiate" onchange="toggleCommPrice(this.value)"> 洽談</label>
+      <label style="margin:0;display:flex;align-items:center;gap:6px;font-size:.85rem"><input type="radio" name="commPriceType" value="custom" id="cpCustom" onchange="toggleCommPrice(this.value)"> 顧客自填</label>
+    </div>
+    <input type="number" id="editCommPrice" placeholder="金額 (TWD)"/>
+    <label>方案設定（選填，設定後顧客可在燈箱選擇方案；最多4個，留空不啟用）</label>
+    <div id="variantInputs">
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="variantName0" placeholder="方案名稱（例：基本方案）" style="flex:2"/>
+        <input type="number" id="variantPrice0" placeholder="金額" style="flex:1"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="variantName1" placeholder="方案名稱（選填）" style="flex:2"/>
+        <input type="number" id="variantPrice1" placeholder="金額" style="flex:1"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="variantName2" placeholder="方案名稱（選填）" style="flex:2"/>
+        <input type="number" id="variantPrice2" placeholder="金額" style="flex:1"/>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input type="text" id="variantName3" placeholder="方案名稱（選填）" style="flex:2"/>
+        <input type="number" id="variantPrice3" placeholder="金額" style="flex:1"/>
+      </div>
+    </div>
+    <label>狀態</label>
+    <select id="editCommStatus">
+      <option value="available">開放中</option>
+      <option value="waitlist">預約候補</option>
+      <option value="closed">暫停接單</option>
+    </select>
+    <div class="modal-actions">
+      <button onclick="saveCommission()">儲存</button>
+      <button class="secondary" onclick="closeModal('commissionModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="progressModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="progressModalTitle">新增委託進度</h3>
+    <label>委託人姓名</label><input type="text" id="editProgName"/>
+    <label>委託人 Email</label><input type="email" id="editProgEmail"/>
+    <label>委託項目</label><input type="text" id="editProgService"/>
+    <label>付款狀態</label>
+    <select id="editProgPayment">
+      <option value="paid">已付款</option>
+      <option value="deposit">已付訂金</option>
+      <option value="outstanding">待付款</option>
+    </select>
+    <label>進度狀態</label>
+    <select id="editProgStatus">
+      <option value="not_started">未開始</option>
+      <option value="in_progress">進行中</option>
+      <option value="completed">已完成</option>
+      <option value="paused">暫停/取消</option>
+    </select>
+    <label>預計完成日期</label><input type="text" id="editProgETA" placeholder="2026/07/31"/>
+    <label>備註（選填）</label><input type="text" id="editProgNote"/>
+    <div class="modal-actions">
+      <button onclick="saveProgress()">儲存</button>
+      <button class="secondary" onclick="closeModal('progressModal')">取消</button>
+    </div>
+  </div></div>
+
+  <div id="cartModal" class="modal hidden"><div class="modal-box large">
+    <h3>購物車</h3>
+    <div id="cartItems"></div>
+    <div id="customPriceInputs"></div>
+    <div id="cartTotal" class="cart-total"></div>
+    <label style="margin-top:16px;display:block">姓名</label>
+    <input type="text" id="buyerName" placeholder="請輸入姓名"/>
+    <label>Email</label>
+    <input type="email" id="buyerEmail" placeholder="請輸入 Email"/>
+    <label>備註 / 委託說明</label>
+    <textarea id="buyerNote" placeholder="請填寫委託細節..."></textarea>
+    <div class="modal-actions">
+      <button onclick="checkout()">前往付款</button>
+      <button class="secondary" onclick="closeModal('cartModal')">繼續瀏覽</button>
+    </div>
+  </div></div>
+
+  <form id="paymentForm" method="POST" style="display:none">
+    <input type="hidden" name="MerchantID" id="fMerchantID"/>
+    <input type="hidden" name="TradeInfo" id="fTradeInfo"/>
+    <input type="hidden" name="TradeSha" id="fTradeSha"/>
+    <input type="hidden" name="Version" value="2.0"/>
+  </form>
+
+  <!-- ══ PAGE: HOME ══ -->
+  <div id="page-home" class="page active">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
+        <!-- Profile -->
+        <div class="profile-card">
+          <div class="avatar-wrap">
+            <img id="avatarImg" src="" alt="Avatar"/>
+          </div>
+          <h1 class="profile-name" id="profileName">KANRI</h1>
+          <p class="profile-subtitle" id="profileSubtitle">插畫委託</p>
+          <button class="edit-btn admin-only hidden" onclick="openProfileModal()">✏ 編輯資訊</button>
+        </div>
+        <!-- Notice under profile -->
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">NOTICE</span>
+            <button class="edit-btn admin-only hidden" onclick="openNoticeModal('home')">✏</button>
+          </div>
+          <div id="homeNoticeList" class="notice-list"></div>
+        </div>
+        <!-- Social Links -->
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">CONNECT</span>
+            <button class="edit-btn admin-only hidden" onclick="openSocialModal()">✏</button>
+          </div>
+          <div id="socialLinks" class="social-links"></div>
+        </div>
+      </aside>
+      <main class="right-main">
+        <div class="section-header">
+          <h2 class="section-heading italic">TERMS OF SERVICE</h2>
+          <button class="add-block-btn admin-only hidden" onclick="openAddHomeBlock()">＋ 新增區塊</button>
+        </div>
+        <div id="homeBlocks" class="home-blocks-grid"></div>
+
+        <!-- CONNECT section -->
+        <div class="connect-section">
+          <div class="section-header" style="margin-top:48px;margin-bottom:20px">
+            <h2 class="section-heading italic">CONNECT</h2>
+            <div style="display:flex;gap:8px">
+              <button class="add-block-btn admin-only hidden" onclick="openEditConnectIntro()">✏ 編輯前言</button>
+              <button class="add-block-btn admin-only hidden" onclick="openAddConnectBlock()">＋ 新增區塊</button>
+            </div>
+          </div>
+          <div class="connect-intro" id="connectIntro"></div>
+          <div id="connectBlocks" class="connect-blocks-grid"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ══ PAGE: COMMISSION ══ -->
+  <div id="page-commission" class="page">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">NOTICE</span>
+            <button class="edit-btn admin-only hidden" onclick="openNoticeModal('comm')">✏</button>
+          </div>
+          <div id="commNoticeList" class="notice-list"></div>
+        </div>
+        <div class="sidebar-section" style="margin-top:32px">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">ATTEN</span>
+            <button class="edit-btn admin-only hidden" onclick="openNoticeModal('atten')">✏</button>
+          </div>
+          <div id="attenList" class="notice-list"></div>
+        </div>
+      </aside>
+      <main class="right-main">
+        <section class="content-section">
+          <div class="section-header">
+            <h2 class="section-heading italic">Price &amp; Service</h2>
+            <button class="add-block-btn admin-only hidden" onclick="openAddCommission()">＋ 新增項目</button>
+          </div>
+          <div id="commissionList" class="commission-list"></div>
+        </section>
+        <section class="content-section" style="margin-top:56px">
+          <div class="section-header">
+            <h2 class="section-heading italic">Waiting List</h2>
+            <button class="add-block-btn admin-only hidden" onclick="openAddProgress()">＋ 新增進度</button>
+          </div>
+          <div class="progress-query-box">
+            <p class="query-label">輸入您的 Email 查詢委託進度</p>
+            <div class="query-row">
+              <input type="email" id="progressQueryEmail" placeholder="your@email.com"/>
+              <button onclick="queryProgress()">查詢</button>
+            </div>
+            <div id="progressQueryResult"></div>
+          </div>
+          <div id="progressAdminTable" class="admin-only hidden"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ══ PAGE: PAYMENT ══ -->
+  <div id="page-payment" class="page">
+    <div class="two-col-layout">
+      <aside class="left-sidebar">
+        <div class="profile-card">
+          <div class="avatar-wrap">
+            <img id="avatarImg2" src="" alt="Avatar"/>
+          </div>
+          <h2 class="profile-name" id="profileName2">KANRI</h2>
+          <p class="profile-subtitle" id="profileSubtitle2">插畫委託</p>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <div class="sidebar-label-row">
+            <span class="sidebar-label italic">NOTICE</span>
+            <button class="edit-btn admin-only hidden" onclick="openNoticeModal('pay')">✏</button>
+          </div>
+          <div id="payNoticeList" class="notice-list"></div>
+        </div>
+      </aside>
+      <main class="right-main">
+        <div class="section-header">
+          <h2 class="section-heading italic">Price &amp; Service</h2>
+        </div>
+        <div id="productGrid" class="product-grid"></div>
+      </main>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>© 2026 KANRI COMMISSION</p>
+  </footer>
+
+  <!-- Commission Lightbox -->
+  <div id="commLightbox" class="modal hidden">
+    <div class="lightbox-box">
+      <button class="lightbox-close" onclick="closeModal('commLightbox')">✕</button>
+      <div class="lightbox-inner">
+        <!-- Left: gallery -->
+        <div class="lightbox-gallery">
+          <div class="lightbox-main-img-wrap">
+            <button class="lightbox-arrow left" onclick="lightboxPrev()">‹</button>
+            <img id="lightboxMainImg" src="" alt="" class="lightbox-main-img"/>
+            <button class="lightbox-arrow right" onclick="lightboxNext()">›</button>
+          </div>
+          <div id="lightboxThumbs" class="lightbox-thumbs"></div>
+        </div>
+        <!-- Right: info -->
+        <div class="lightbox-info">
+          <div id="lightboxTags" class="comm-item-tags" style="margin-bottom:10px"></div>
+          <h2 id="lightboxName" class="lightbox-name"></h2>
+          <div id="lightboxStatus" style="margin:8px 0"></div>
+          <div id="lightboxPrice" class="lightbox-price"></div>
+          <div id="lightboxDetail" class="lightbox-detail"></div>
+          <div id="lightboxVariants" style="margin-top:16px"></div>
+          <button id="lightboxCartBtn" class="lightbox-cart-btn" onclick="lightboxAddToCart()">加入購物車</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

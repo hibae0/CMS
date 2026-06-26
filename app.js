@@ -648,8 +648,8 @@ function checkout() {
   const name  = document.getElementById("buyerName").value.trim();
   const email = document.getElementById("buyerEmail").value.trim();
   const note  = document.getElementById("buyerNote").value.trim();
-  if (!name)  { toast("請填寫姓名"); return; }
-  if (!email) { toast("請填寫 Email"); return; }
+  if (!name)  { toast("請填寫登記暱稱"); return; }
+  if (!email) { toast("請填寫登記Email"); return; }
   if (!cart.length) { toast("購物車是空的"); return; }
   if (cart.some(ci=>{ const p=commissions.find(x=>x.id===ci.id); return p&&p.priceType==="negotiate"; })) {
     toast("含有「洽談」商品，請先來信確認"); return;

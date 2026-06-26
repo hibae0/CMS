@@ -562,7 +562,7 @@ function renderCartModal() {
   const customItems = cart.filter(ci=>{ const p=commissions.find(x=>x.id===ci.id); return p&&p.priceType==="custom"; });
   if (customItems.length) {
     customArea.innerHTML = `<div style="margin-top:14px;padding:12px;background:var(--off);border-radius:9px;border:1px solid var(--border)">
-      <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">請填寫以下商品的委託金額（與委託人議定後填入）：</p>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:10px">請填寫以下商品的委託金額（報價議定後填入）：</p>
       ${customItems.map(ci=>{ const p=commissions.find(x=>x.id===ci.id); const saved=ci.customPrice>0?ci.customPrice:"";
         return `<div style="margin-bottom:8px">
           <label style="font-size:.78rem;color:var(--muted);display:block;margin-bottom:3px">${p.name} × ${ci.qty}</label>
@@ -613,8 +613,8 @@ function checkout() {
   const name  = document.getElementById("buyerName").value.trim();
   const email = document.getElementById("buyerEmail").value.trim();
   const note  = document.getElementById("buyerNote").value.trim();
-  if (!name)  { toast("請填寫姓名"); return; }
-  if (!email) { toast("請填寫 Email"); return; }
+  if (!name)  { toast("請填寫登記暱稱"); return; }
+  if (!email) { toast("請填寫登記Email"); return; }
   if (!cart.length) { toast("購物車是空的"); return; }
   if (cart.some(ci=>{ const p=commissions.find(x=>x.id===ci.id); return p&&p.priceType==="negotiate"; })) {
     toast("含有「洽談」商品，請先來信確認"); return;

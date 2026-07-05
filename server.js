@@ -205,6 +205,7 @@ app.post("/payment/return", (req, res) => {
 app.post("/payment/notify", (req, res) => {
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
   try {
     const tradeInfo = req.body.TradeInfo;
     const result    = JSON.parse(aesDecrypt(tradeInfo));
@@ -224,8 +225,7 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n🎨 KANRI COMMISSION Server`);
-  console.log(`   http://localhost:${PORT}\n`);
+// ─── 攔截未處理的 POST，避免 307 redirect ────────
+app.post("*", (req, res) => {
+  res.status(404).json({ error: "Not found" });
 });

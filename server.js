@@ -204,17 +204,18 @@ app.post("/payment/return", (req, res) => {
 
 // ─── 藍新通知（背景） ──────────────────────────
 app.post("/payment/notify", (req, res) => {
+  // 先立刻回 200，避免藍新重試
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Cache-Control", "no-store");
-  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.status(200).send("OK");
+  // 再非同步處理通知內容
   try {
     const tradeInfo = req.body.TradeInfo;
-    const result    = JSON.parse(aesDecrypt(tradeInfo));
-    console.log("📦 Newebpay Notify:", result);
-    res.status(200).send("OK");
+    if (!tradeInfo) return;
+    const result = JSON.parse(aesDecrypt(tradeInfo));
+    console.log("📦 Newebpay Notify:", JSON.stringify(result));
   } catch(e) {
-    console.error("Notify error:", e);
-    res.status(200).send("ERROR");
+    console.error("Notify parse error:", e.message);
   }
 });
 
@@ -226,10 +227,6 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ─── 攔截未處理的 POST，避免 307 redirect ────────
-app.post("*", (req, res) => {
-  res.status(404).json({ error: "Not found" });
-});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {

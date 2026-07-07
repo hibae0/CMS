@@ -669,7 +669,9 @@ function checkout() {
   },0);
   const amt=fixedTotal+customTotal;
   if (amt<1) { toast("訂單金額不得為 0"); return; }
-  fetch("/api/create-payment", {
+  // 提醒顧客不要在頁面停留太久
+  toast("正在建立付款，請勿重複點擊...");
+   fetch("/api/create-payment", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ cart, buyerName:name, buyerEmail:email, buyerNote:note, products:commissions })
   }).then(r=>r.json()).then(data=>{

@@ -150,7 +150,7 @@ app.post("/api/create-payment", async (req, res) => {
   const MerchantOrderNo = "KC" + Date.now();
   const TimeStamp = Math.floor(Date.now()/1000);
 console.log("🕐 TimeStamp:", TimeStamp, new Date().toISOString());
-  const host = `${req.protocol}://${req.get("host")}`;
+  const host = `https://${req.get("host")}`;
 
   const tradeParams = [
     `MerchantID=${MERCHANT_ID}`,

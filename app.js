@@ -426,7 +426,7 @@ function renderProgressAdmin() {
 
   const thead = `<thead><tr>
     <th>委託人</th><th>Email</th><th>項目</th><th>付款</th><th>進度</th>
-    <th>ETA</th><th>ACD 交稿</th><th>備註</th><th></th>
+    <th>ETA</th><th>ACD </th><th>備註</th><th></th>
   </tr></thead>`;
 
   el.innerHTML = `

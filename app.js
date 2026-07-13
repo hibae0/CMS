@@ -391,26 +391,64 @@ function deleteCommission(id) {
 function renderProgressAdmin() {
   const el = document.getElementById("progressAdminTable"); if (!el) return;
   if (!progressList.length) { el.innerHTML=`<p style="font-size:.8rem;color:var(--muted)">尚無進度資料</p>`; return; }
+
   const payBadge  = v=>({paid:"prog-paid",deposit:"prog-deposit",outstanding:"prog-outstanding"}[v]||"prog-outstanding");
   const statBadge = v=>({not_started:"prog-not-started",in_progress:"prog-in-progress",completed:"prog-completed",paused:"prog-paused"}[v]||"prog-not-started");
   const payLabel  = v=>({paid:"已付款",deposit:"已付訂金",outstanding:"待付款"}[v]||v);
   const statLabel = v=>({not_started:"未開始",in_progress:"進行中",completed:"已完成",paused:"暫停/取消"}[v]||v);
-  el.innerHTML = `<div style="overflow-x:auto"><table class="prog-table">
-    <thead><tr><th>委託人</th><th>Email</th><th>項目</th><th>付款</th><th>進度</th><th>ETA</th><th>備註</th><th></th></tr></thead>
-    <tbody>${progressList.map(p=>`<tr>
-      <td>${p.name}</td>
-      <td style="font-size:.75rem;color:var(--muted)">${p.email}</td>
-      <td>${p.service||""}</td>
-      <td><span class="prog-badge ${payBadge(p.payment)}">${payLabel(p.payment)}</span></td>
-      <td><span class="prog-badge ${statBadge(p.status)}">${statLabel(p.status)}</span></td>
-      <td style="font-size:.78rem">${p.eta||""}</td>
-      <td style="font-size:.75rem;color:var(--muted)">${p.note||""}</td>
-      <td><div class="prog-row-actions">
-        <button class="edit-btn" onclick="openEditProgress('${p.id}')">✏</button>
-        <button class="del-btn" onclick="deleteProgress('${p.id}')">✕</button>
-      </div></td>
-    </tr>`).join("")}
-    </tbody></table></div>`;
+
+  // 依 ETA 排序（無日期排最後）
+  const sortByETA = list => [...list].sort((a,b)=>{
+    if (!a.eta && !b.eta) return 0;
+    if (!a.eta) return 1;
+    if (!b.eta) return -1;
+    return new Date(a.eta) - new Date(b.eta);
+  });
+
+  // 分成進行中 / 已完成暫停
+  const active    = sortByETA(progressList.filter(p => p.status !== "completed" && p.status !== "paused"));
+  const finished  = sortByETA(progressList.filter(p => p.status === "completed" || p.status === "paused"));
+
+  const buildRows = list => list.map(p=>`<tr>
+    <td>${p.name}</td>
+    <td style="font-size:.75rem;color:var(--muted)">${p.email}</td>
+    <td>${p.service||""}</td>
+    <td><span class="prog-badge ${payBadge(p.payment)}">${payLabel(p.payment)}</span></td>
+    <td><span class="prog-badge ${statBadge(p.status)}">${statLabel(p.status)}</span></td>
+    <td style="font-size:.78rem">${p.eta||""}</td>
+    <td style="font-size:.78rem;color:var(--muted)">${p.acd||""}</td>
+    <td style="font-size:.75rem;color:var(--muted)">${p.note||""}</td>
+    <td><div class="prog-row-actions">
+      <button class="edit-btn" onclick="openEditProgress('${p.id}')">✏</button>
+      <button class="del-btn" onclick="deleteProgress('${p.id}')">✕</button>
+    </div></td>
+  </tr>`).join("");
+
+  const thead = `<thead><tr>
+    <th>委託人</th><th>Email</th><th>項目</th><th>付款</th><th>進度</th>
+    <th>ETA</th><th>ACD 交稿</th><th>備註</th><th></th>
+  </tr></thead>`;
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="prog-table">
+        ${thead}
+        <tbody>${buildRows(active)}</tbody>
+      </table>
+    </div>
+    ${finished.length ? `
+    <div style="margin-top:28px">
+      <div style="font-size:.75rem;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+        已完成 / 暫停取消
+      </div>
+      <div style="overflow-x:auto;opacity:.7">
+        <table class="prog-table">
+          ${thead}
+          <tbody>${buildRows(finished)}</tbody>
+        </table>
+      </div>
+    </div>` : ""}
+  `;
 }
 function queryProgress() {
   const email  = document.getElementById("progressQueryEmail").value.trim().toLowerCase();
@@ -458,6 +496,7 @@ function openEditProgress(id) {
   document.getElementById("editProgPayment").value = p.payment;
   document.getElementById("editProgStatus").value  = p.status;
   document.getElementById("editProgETA").value     = p.eta||"";
+  document.getElementById("editProgACD").value     = p.acd||"";
   document.getElementById("editProgNote").value    = p.note||"";
   openModal("progressModal");
 }
@@ -468,13 +507,14 @@ function saveProgress() {
   const payment = document.getElementById("editProgPayment").value;
   const status  = document.getElementById("editProgStatus").value;
   const eta     = document.getElementById("editProgETA").value.trim();
+  const acd     = document.getElementById("editProgACD").value.trim();
   const note    = document.getElementById("editProgNote").value.trim();
   if (!name||!email) { toast("請填寫姓名與 Email"); return; }
   if (editingProgressId) {
     const i = progressList.findIndex(x=>x.id===editingProgressId);
-    if (i!==-1) progressList[i]={ ...progressList[i], name, email, service, payment, status, eta, note };
+    if (i!==-1) progressList[i]={ ...progressList[i], name, email, service, payment, status, eta, acd, note };
   } else {
-    progressList.push({ id:"p"+Date.now(), name, email, service, payment, status, eta, note });
+    progressList.push({ id:"p"+Date.now(), name, email, service, payment, status, eta, acd, note });
   }
   renderProgressAdmin(); saveToServer(); closeModal("progressModal"); toast("已儲存");
 }

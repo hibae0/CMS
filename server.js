@@ -135,6 +135,8 @@ app.post("/api/create-payment", async (req, res) => {
     return res.status(400).json({ error: "缺少必要欄位" });
   }
   const amt = cart.reduce((sum, c) => {
+    // 有方案價格（variant）優先使用
+    if (c.variantPrice > 0) return sum + c.variantPrice * c.qty;
     const p = products.find(x => x.id === c.id);
     if (!p) return sum;
     if (p.priceType === "custom") return sum + (c.customPrice||0) * c.qty;
@@ -144,7 +146,9 @@ app.post("/api/create-payment", async (req, res) => {
 
   const itemDesc = cart.map(c => {
     const p = products.find(x => x.id === c.id);
-    return p ? `${p.name}x${c.qty}` : "";
+    if (!p) return "";
+    const name = c.variantName ? `${p.name}(${c.variantName})` : p.name;
+    return `${name}x${c.qty}`;
   }).filter(Boolean).join(", ");
 
   const MerchantOrderNo = "KC" + Date.now();

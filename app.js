@@ -696,7 +696,8 @@ function checkout() {
   }
   let customTotal=0;
   for (const ci of cart) {
-    const p=commissions.find(x=>x.id===ci.id);
+    if (ci.variantPrice>0) continue; // variant 已在 fixedTotal 計算
+    const p = commissions.find(x=>x.id===ci.id);
     if (!p||p.priceType!=="custom") continue;
     const val=ci.customPrice||0;
     if (val<1) { toast(`請填寫「${p.name}」的委託金額`); return; }
@@ -705,7 +706,9 @@ function checkout() {
   const fixedTotal=cart.reduce((s,ci)=>{
     if (ci.variantPrice>0) return s+ci.variantPrice*ci.qty;
     const p=commissions.find(x=>x.id===ci.id);
-    return s+(p&&(p.priceType==="fixed"||!p.priceType)&&p.price>0?p.price*ci.qty:0);
+    if (!p) return s;
+    if (p.priceType==="custom") return s; // 自填另外算
+    return s+(p.price>0?p.price*ci.qty:0);
   },0);
   const amt=fixedTotal+customTotal;
   if (amt<1) { toast("訂單金額不得為 0"); return; }

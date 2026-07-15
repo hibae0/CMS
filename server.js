@@ -136,7 +136,7 @@ app.post("/api/create-payment", async (req, res) => {
   }
   const amt = cart.reduce((sum, c) => {
     // 有方案價格（variant）優先使用
-    if (c.variantPrice > 0) return sum + c.variantPrice * c.qty;
+    if (Number(c.variantPrice) > 0) return sum + Number(c.variantPrice) * c.qty;
     const p = products.find(x => x.id === c.id);
     if (!p) return sum;
     if (p.priceType === "custom") return sum + (c.customPrice||0) * c.qty;

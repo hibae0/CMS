@@ -537,8 +537,8 @@ function renderProducts() {
     const statusMap = {available:["status-available","開放中"],waitlist:["status-waitlist","預約候補"],closed:["status-closed","暫停接單"]};
     const [sc,sl] = statusMap[c.status]||statusMap.available;
     const addBtn = c.status!=="closed"
-      ? `<button class="add-to-cart-btn" onclick="event.stopPropagation();addToCart('${c.id}')" title="加入購物車">＋</button>`:"";
-    return `<div class="product-card ${c.status==="closed"?"closed":""}">
+      ? `<button class="add-to-cart-btn" onclick="event.stopPropagation();${c.variants&&c.variants.length?`openLightbox('${c.id}')`:`addToCart('${c.id}')`}" title="${c.variants&&c.variants.length?'選擇方案':'加入購物車'}">＋</button>`:"";
+    return `<div class="product-card ${c.status==="closed"?"closed":""}" onclick="openLightbox('${c.id}')">
       ${imgHtml}
       <div class="product-body">
         <div class="product-tags">${tags}</div>

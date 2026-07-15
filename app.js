@@ -579,7 +579,7 @@ function addToCartWithVariant(id, variantName, variantPrice) {
   const cartKey = id + "__" + variantName;
   const existing = cart.find(x=>x.cartKey===cartKey);
   if (existing) existing.qty++;
-  else cart.push({ id, cartKey, variantName, variantPrice, qty:1, customPrice:0 });
+  else cart.push({ id, cartKey, variantName, variantPrice: Number(variantPrice), qty:1, customPrice:0 });
   save("kc_cart",cart); updateCartCount();
   toast(`「${c.name}（${variantName}）」已加入購物車`);
 }
@@ -691,6 +691,12 @@ function checkout() {
   if (!name)  { toast("請填寫登記暱稱"); return; }
   if (!email) { toast("請填寫登記Email"); return; }
   if (!cart.length) { toast("購物車是空的"); return; }
+   // 清除無效的舊版 cart item（沒有對應商品的）
+  cart = cart.filter(ci => commissions.find(x => x.id === ci.id));
+  save("kc_cart", cart);
+  updateCartCount();
+  if (!cart.length) { toast("購物車是空的，請重新加入商品"); return; }
+   
   if (cart.some(ci=>{ const p=commissions.find(x=>x.id===ci.id); return p&&p.priceType==="negotiate"; })) {
     toast("含有「洽談」商品，請先來信確認"); return;
   }

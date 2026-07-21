@@ -18,6 +18,7 @@
         <button class="nav-btn active" data-page="home" onclick="showPage('home')">首頁</button>
         <button class="nav-btn" data-page="commission" onclick="showPage('commission')">委託價目 &amp; 進度</button>
         <button class="nav-btn" data-page="payment" onclick="showPage('payment')">付款</button>
+        <button class="nav-btn admin-only hidden" data-page="dashboard" onclick="showPage('dashboard')">後台</button>
       </nav>
       <div class="header-right">
         <button class="cart-btn" onclick="openCart()">
@@ -165,6 +166,7 @@
       <option value="completed">已完成</option>
       <option value="paused">暫停/取消</option>
     </select>
+    <label>委託金額（TWD，用於統計）</label><input type="number" id="editProgAmt" placeholder="0"/>
     <label>預計完成日期（ETA）</label><input type="text" id="editProgETA" placeholder="2026/07/31"/>
     <label>實際交稿日期（ACD）</label><input type="text" id="editProgACD" placeholder="2026/08/01"/>
     <label>備註（選填）</label><input type="text" id="editProgNote"/>
@@ -327,7 +329,67 @@
       </main>
     </div>
   </div>
+<!-- ══ PAGE: DASHBOARD ══ -->
+  <div id="page-dashboard" class="page">
+    <div class="dashboard-layout">
 
+      <!-- 每月收入 -->
+      <section class="dash-section">
+        <h2 class="dash-section-title">每月收入統計</h2>
+        <div id="dashIncome" class="dash-income"></div>
+      </section>
+
+      <!-- TO DO LIST -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">TO DO LIST</h2>
+          <button class="add-block-btn" onclick="openAddTodo()">＋ 新增</button>
+        </div>
+        <div id="dashTodo" class="dash-todo"></div>
+      </section>
+
+      <!-- 個人專案 -->
+      <section class="dash-section">
+        <div class="dash-section-header">
+          <h2 class="dash-section-title">個人專案</h2>
+          <button class="add-block-btn" onclick="openAddProject()">＋ 新增</button>
+        </div>
+        <div id="dashProjects" class="dash-projects"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Todo Modal -->
+  <div id="todoModal" class="modal hidden"><div class="modal-box">
+    <h3 id="todoModalTitle">新增待辦</h3>
+    <label>內容</label><input type="text" id="editTodoText" placeholder="待辦事項..."/>
+    <label>截止日期（選填）</label><input type="text" id="editTodoDue" placeholder="2026/08/01"/>
+    <div class="modal-actions">
+      <button onclick="saveTodo()">儲存</button>
+      <button class="secondary" onclick="closeModal('todoModal')">取消</button>
+    </div>
+  </div></div>
+
+  <!-- Project Modal -->
+  <div id="projectModal" class="modal hidden"><div class="modal-box large">
+    <h3 id="projectModalTitle">新增個人專案</h3>
+    <label>專案名稱</label><input type="text" id="editProjectName" placeholder="例：原創插畫系列"/>
+    <label>說明</label><textarea id="editProjectDesc" placeholder="專案內容說明..."></textarea>
+    <label>狀態</label>
+    <select id="editProjectStatus">
+      <option value="planning">規劃中</option>
+      <option value="in_progress">進行中</option>
+      <option value="completed">已完成</option>
+      <option value="paused">暫停</option>
+    </select>
+    <label>截止日期（選填）</label><input type="text" id="editProjectDue" placeholder="2026/12/31"/>
+    <div class="modal-actions">
+      <button onclick="saveProject()">儲存</button>
+      <button class="secondary" onclick="closeModal('projectModal')">取消</button>
+    </div>
+  </div></div>
+  
   <footer class="site-footer">
     <p>© 2026 KANRI COMMISSION</p>
   </footer>

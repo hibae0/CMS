@@ -90,9 +90,8 @@ async function loadFromServer() {
     if (data.socials?.length)                 socials       = data.socials;
     if (data.connectBlocks?.length)           connectBlocks = data.connectBlocks;
     if (data.connectIntro)                    connectIntro  = data.connectIntro;
-     if (Array.isArray(data.todoList))     todoList     = data.todoList;
+    if (Array.isArray(data.todoList))     todoList     = data.todoList;
     if (Array.isArray(data.projectList))  projectList  = data.projectList;
-     body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro }),
 
     console.log("✅ 資料載入成功");
   } catch(e) {
@@ -119,6 +118,7 @@ async function saveToServer() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList }),
+    });
     const data = await res.json();
     if (!data.ok) console.warn("儲存回應異常:", data);
   } catch(e) {
@@ -951,8 +951,10 @@ function saveConnectBlock() {
 function deleteConnectBlock(id) {
   if (!confirm("確定刪除？")) return;
   connectBlocks=connectBlocks.filter(x=>x.id!==id);
+  renderConnectSection(); saveToServer(); toast("已刪除");
+}
 
-   // ── DASHBOARD ─────────────────────────────
+// ── DASHBOARD ─────────────────────────────
 let editingTodoId    = null;
 let editingProjectId = null;
 
@@ -1103,5 +1105,4 @@ function deleteProject(id) {
   projectList = projectList.filter(x=>x.id!==id);
   renderProjectList(); saveToServer(); toast("已刪除");
 }
-  renderConnectSection(); saveToServer(); toast("已刪除");
-}
+ 

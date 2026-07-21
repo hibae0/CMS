@@ -45,6 +45,8 @@ let progressList  = DEFAULT_PROGRESS;
 let socials       = DEFAULT_SOCIALS;
 let connectBlocks = DEFAULT_CONNECT_BLOCKS;
 let connectIntro  = DEFAULT_CONNECT_INTRO;
+let todoList    = [];
+let projectList = [];
 let cart          = JSON.parse(localStorage.getItem("kc_cart")) || [];
 
 let editingHomeBlockId  = null;
@@ -88,6 +90,9 @@ async function loadFromServer() {
     if (data.socials?.length)                 socials       = data.socials;
     if (data.connectBlocks?.length)           connectBlocks = data.connectBlocks;
     if (data.connectIntro)                    connectIntro  = data.connectIntro;
+     if (Array.isArray(data.todoList))     todoList     = data.todoList;
+    if (Array.isArray(data.projectList))  projectList  = data.projectList;
+     body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro }),
 
     console.log("✅ 資料載入成功");
   } catch(e) {
@@ -105,6 +110,7 @@ function renderAll() {
   renderProducts();
   renderSocials();
   renderConnectSection();
+  renderDashboard();
 }
 
 async function saveToServer() {
@@ -112,8 +118,7 @@ async function saveToServer() {
     const res = await fetch("/api/site-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro }),
-    });
+      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList }),
     const data = await res.json();
     if (!data.ok) console.warn("儲存回應異常:", data);
   } catch(e) {
@@ -481,7 +486,7 @@ function _doQueryProgress(email, result) {
 function openAddProgress() {
   editingProgressId = null;
   document.getElementById("progressModalTitle").textContent = "新增委託進度";
-  ["editProgName","editProgEmail","editProgService","editProgETA","editProgNote"].forEach(id=>document.getElementById(id).value="");
+  ["editProgName","editProgEmail","editProgService","editProgETA","editProgAmt","editProgACD","editProgNote"].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=""; });
   document.getElementById("editProgPayment").value = "paid";
   document.getElementById("editProgStatus").value  = "not_started";
   openModal("progressModal");
@@ -496,7 +501,8 @@ function openEditProgress(id) {
   document.getElementById("editProgPayment").value = p.payment;
   document.getElementById("editProgStatus").value  = p.status;
   document.getElementById("editProgETA").value     = p.eta||"";
-  document.getElementById("editProgACD").value     = p.acd||"";
+  if(document.getElementById("editProgAmt")) document.getElementById("editProgAmt").value = p.amt||"";
+  if(document.getElementById("editProgACD")) document.getElementById("editProgACD").value = p.acd||"";
   document.getElementById("editProgNote").value    = p.note||"";
   openModal("progressModal");
 }
@@ -507,14 +513,15 @@ function saveProgress() {
   const payment = document.getElementById("editProgPayment").value;
   const status  = document.getElementById("editProgStatus").value;
   const eta     = document.getElementById("editProgETA").value.trim();
-  const acd     = document.getElementById("editProgACD").value.trim();
+  const amt     = parseInt(document.getElementById("editProgAmt")?.value)||0;
+  const acd     = document.getElementById("editProgACD")?.value.trim()||"";
   const note    = document.getElementById("editProgNote").value.trim();
-  if (!name||!email) { toast("請填寫姓名與 Email"); return; }
+  if (!name||!email) { toast("請填寫登記暱稱與 Email"); return; }
   if (editingProgressId) {
     const i = progressList.findIndex(x=>x.id===editingProgressId);
-    if (i!==-1) progressList[i]={ ...progressList[i], name, email, service, payment, status, eta, acd, note };
+    if (i!==-1) progressList[i]={ ...progressList[i], name, email, service, payment, status, eta, amt, acd, note };
   } else {
-    progressList.push({ id:"p"+Date.now(), name, email, service, payment, status, eta, acd, note });
+    progressList.push({ id:"p"+Date.now(), name, email, service, payment, status, eta, amt, acd, note });
   }
   renderProgressAdmin(); saveToServer(); closeModal("progressModal"); toast("已儲存");
 }
@@ -944,5 +951,157 @@ function saveConnectBlock() {
 function deleteConnectBlock(id) {
   if (!confirm("確定刪除？")) return;
   connectBlocks=connectBlocks.filter(x=>x.id!==id);
+
+   // ── DASHBOARD ─────────────────────────────
+let editingTodoId    = null;
+let editingProjectId = null;
+
+function renderDashboard() {
+  renderIncome();
+  renderTodoList();
+  renderProjectList();
+}
+
+// 每月收入
+function renderIncome() {
+  const el = document.getElementById("dashIncome"); if (!el) return;
+  const monthly = {};
+  progressList.forEach(p => {
+    if (!p.eta || !p.amt) return;
+    const d = new Date(p.eta.replace(/\//g,"-"));
+    if (isNaN(d)) return;
+    const key = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}`;
+    monthly[key] = (monthly[key]||0) + Number(p.amt);
+  });
+  const keys = Object.keys(monthly).sort();
+  if (!keys.length) { el.innerHTML=`<p style="font-size:.82rem;color:var(--muted)">尚無收入資料（請在進度表填寫金額與ETA）</p>`; return; }
+  const max = Math.max(...Object.values(monthly));
+  el.innerHTML = keys.map(k => {
+    const val = monthly[k];
+    const pct = max > 0 ? Math.round(val/max*100) : 0;
+    return `<div class="income-row">
+      <span class="income-month">${k}</span>
+      <div class="income-bar-wrap">
+        <div class="income-bar" style="width:${pct}%"></div>
+      </div>
+      <span class="income-amt">TWD ${val.toLocaleString()}</span>
+    </div>`;
+  }).join("") + `<div class="income-total">總計：TWD ${keys.reduce((s,k)=>s+monthly[k],0).toLocaleString()}</div>`;
+}
+
+// TO DO LIST
+function renderTodoList() {
+  const el = document.getElementById("dashTodo"); if (!el) return;
+  if (!todoList.length) { el.innerHTML=`<p style="font-size:.82rem;color:var(--muted)">尚無待辦事項</p>`; return; }
+  const pending   = todoList.filter(t=>!t.done);
+  const completed = todoList.filter(t=>t.done);
+  const buildItem = t => `<div class="todo-item ${t.done?"todo-done":""}">
+    <input type="checkbox" ${t.done?"checked":""} onchange="toggleTodo('${t.id}',this.checked)"/>
+    <span class="todo-text">${t.text}</span>
+    ${t.due?`<span class="todo-due">${t.due}</span>`:""}
+    <div class="todo-actions">
+      <button class="edit-btn" onclick="openEditTodo('${t.id}')">✏</button>
+      <button class="del-btn" onclick="deleteTodo('${t.id}')">✕</button>
+    </div>
+  </div>`;
+  el.innerHTML = pending.map(buildItem).join("") +
+    (completed.length ? `<div class="todo-divider">已完成</div>${completed.map(buildItem).join("")}` : "");
+}
+
+function openAddTodo() {
+  editingTodoId = null;
+  document.getElementById("todoModalTitle").textContent = "新增待辦";
+  document.getElementById("editTodoText").value = "";
+  document.getElementById("editTodoDue").value  = "";
+  openModal("todoModal");
+}
+function openEditTodo(id) {
+  const t = todoList.find(x=>x.id===id); if (!t) return;
+  editingTodoId = id;
+  document.getElementById("todoModalTitle").textContent = "編輯待辦";
+  document.getElementById("editTodoText").value = t.text;
+  document.getElementById("editTodoDue").value  = t.due||"";
+  openModal("todoModal");
+}
+function saveTodo() {
+  const text = document.getElementById("editTodoText").value.trim();
+  const due  = document.getElementById("editTodoDue").value.trim();
+  if (!text) { toast("請填寫內容"); return; }
+  if (editingTodoId) {
+    const i = todoList.findIndex(x=>x.id===editingTodoId);
+    if (i!==-1) todoList[i] = { ...todoList[i], text, due };
+  } else {
+    todoList.push({ id:"t"+Date.now(), text, due, done:false });
+  }
+  renderTodoList(); saveToServer(); closeModal("todoModal"); toast("已儲存");
+}
+function toggleTodo(id, done) {
+  const t = todoList.find(x=>x.id===id); if (!t) return;
+  t.done = done;
+  renderTodoList(); saveToServer();
+}
+function deleteTodo(id) {
+  if (!confirm("確定刪除？")) return;
+  todoList = todoList.filter(x=>x.id!==id);
+  renderTodoList(); saveToServer(); toast("已刪除");
+}
+
+// 個人專案
+function renderProjectList() {
+  const el = document.getElementById("dashProjects"); if (!el) return;
+  if (!projectList.length) { el.innerHTML=`<p style="font-size:.82rem;color:var(--muted)">尚無個人專案</p>`; return; }
+  const statMap = {planning:["proj-planning","規劃中"],in_progress:["proj-inprogress","進行中"],completed:["proj-completed","已完成"],paused:["proj-paused","暫停"]};
+  el.innerHTML = projectList.map(p => {
+    const [sc,sl] = statMap[p.status]||statMap.planning;
+    return `<div class="proj-card">
+      <div class="proj-card-header">
+        <span class="proj-name">${p.name}</span>
+        <span class="proj-badge ${sc}">${sl}</span>
+        <div class="proj-actions">
+          <button class="edit-btn" onclick="openEditProject('${p.id}')">✏</button>
+          <button class="del-btn" onclick="deleteProject('${p.id}')">✕</button>
+        </div>
+      </div>
+      ${p.desc?`<div class="proj-desc">${p.desc}</div>`:""}
+      ${p.due?`<div class="proj-due">截止：${p.due}</div>`:""}
+    </div>`;
+  }).join("");
+}
+function openAddProject() {
+  editingProjectId = null;
+  document.getElementById("projectModalTitle").textContent = "新增個人專案";
+  ["editProjectName","editProjectDesc","editProjectDue"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("editProjectStatus").value = "planning";
+  openModal("projectModal");
+}
+function openEditProject(id) {
+  const p = projectList.find(x=>x.id===id); if (!p) return;
+  editingProjectId = id;
+  document.getElementById("projectModalTitle").textContent = "編輯個人專案";
+  document.getElementById("editProjectName").value   = p.name;
+  document.getElementById("editProjectDesc").value   = p.desc||"";
+  document.getElementById("editProjectStatus").value = p.status;
+  document.getElementById("editProjectDue").value    = p.due||"";
+  openModal("projectModal");
+}
+function saveProject() {
+  const name   = document.getElementById("editProjectName").value.trim();
+  const desc   = document.getElementById("editProjectDesc").value.trim();
+  const status = document.getElementById("editProjectStatus").value;
+  const due    = document.getElementById("editProjectDue").value.trim();
+  if (!name) { toast("請填寫專案名稱"); return; }
+  if (editingProjectId) {
+    const i = projectList.findIndex(x=>x.id===editingProjectId);
+    if (i!==-1) projectList[i] = { ...projectList[i], name, desc, status, due };
+  } else {
+    projectList.push({ id:"pj"+Date.now(), name, desc, status, due });
+  }
+  renderProjectList(); saveToServer(); closeModal("projectModal"); toast("已儲存");
+}
+function deleteProject(id) {
+  if (!confirm("確定刪除？")) return;
+  projectList = projectList.filter(x=>x.id!==id);
+  renderProjectList(); saveToServer(); toast("已刪除");
+}
   renderConnectSection(); saveToServer(); toast("已刪除");
 }

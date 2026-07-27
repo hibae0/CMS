@@ -863,9 +863,30 @@ function lightboxAddToCart() {
 function renderSocials() {
   const el=document.getElementById("socialLinks"); if (!el) return;
   if (!socials.length) { el.innerHTML=`<p style="font-size:.75rem;color:var(--light)">尚未設定連結</p>`; return; }
-  el.innerHTML=socials.map(s=>`<a href="${s.url}" target="_blank" rel="noopener" class="social-btn" title="${s.label}">
-    <span class="social-icon">${s.icon}</span><span class="social-label">${s.label}</span></a>`).join("");
+  el.innerHTML=socials.map(s => {
+    const isEmail = s.url.startsWith("mailto:");
+    const email   = s.url.replace("mailto:","");
+    if (isEmail) {
+      return `<button class="social-btn" onclick="copySocial('${email}',this)" title="點擊複製">
+        <span class="social-icon">${s.icon}</span>
+        <span class="social-label">${s.label}</span>
+        <span class="social-copy-hint">點擊複製</span>
+      </button>`;
+    }
+    return `<a href="${s.url}" target="_blank" rel="noopener" class="social-btn" title="${s.label}">
+      <span class="social-icon">${s.icon}</span>
+      <span class="social-label">${s.label}</span>
+    </a>`;
+  }).join("");
 }
+
+function copySocial(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const hint = btn.querySelector(".social-copy-hint");
+    if (hint) { hint.textContent = "已複製！"; setTimeout(()=>{ hint.textContent="點擊複製"; }, 2000); }
+  }).catch(() => toast("複製失敗，請手動複製"));
+}
+
 function openSocialModal() {
   document.getElementById("socialEditList").innerHTML=socials.map((s,i)=>`
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
@@ -905,11 +926,22 @@ function renderConnectSection() {
       <button class="del-btn" onclick="deleteConnectBlock('${b.id}')">✕</button>
     </div>`:"";
     return `<div class="connect-block">${adminBtns}
-      <div class="connect-block-title">${b.title}</div>
+      <div class="connect-block-title">
+        ${b.title}
+        <button class="connect-copy-btn" onclick="copyConnectBlock('${b.id}')" title="複製全文">⎘ 複製</button>
+      </div>
       <div class="connect-block-content">${html}</div>
     </div>`;
   }).join("");
 }
+
+function copyConnectBlock(id) {
+  const b = connectBlocks.find(x=>x.id===id); if (!b) return;
+  navigator.clipboard.writeText(b.content).then(() => {
+    toast(`「${b.title}」已複製`);
+  }).catch(() => toast("複製失敗，請手動複製"));
+}
+
 function openAddConnectBlock() {
   editingConnectId=null; editingConnectIsIntro=false;
   document.getElementById("connectModalTitle").textContent="新增 CONNECT 區塊";

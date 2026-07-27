@@ -506,10 +506,19 @@ body{font-family:'Noto Sans TC',sans-serif;background:#fff;color:#1a1a1a;min-hei
   color: var(--text);
   font-size: .8rem;
   transition: background .2s, border-color .2s;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Noto Sans TC', sans-serif;
 }
 .social-btn:hover {
   background: var(--subtle);
   border-color: var(--border2);
+}
+.social-copy-hint {
+  font-size: .68rem;
+  color: var(--light);
+  margin-left: auto;
 }
 .social-icon {
   font-size: .85rem;
@@ -645,19 +654,6 @@ body{font-family:'Noto Sans TC',sans-serif;background:#fff;color:#1a1a1a;min-hei
   .dash-projects { grid-template-columns:1fr; }
 }
 
-/* ── SOCIAL COPY ── */
-button.social-btn {
-  background: var(--off);
-  border: 1px solid var(--border);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-}
-.social-copy-hint {
-  font-size: .68rem;
-  color: var(--light);
-  margin-left: auto;
-}
 
 /* ── CONNECT COPY BTN ── */
 .connect-copy-btn {

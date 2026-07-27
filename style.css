@@ -644,3 +644,40 @@ body{font-family:'Noto Sans TC',sans-serif;background:#fff;color:#1a1a1a;min-hei
   .dashboard-layout { padding:20px 16px 40px; }
   .dash-projects { grid-template-columns:1fr; }
 }
+
+/* ── SOCIAL COPY ── */
+button.social-btn {
+  background: var(--off);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.social-copy-hint {
+  font-size: .68rem;
+  color: var(--light);
+  margin-left: auto;
+}
+
+/* ── CONNECT COPY BTN ── */
+.connect-copy-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: .7rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+.connect-copy-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+.connect-block-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

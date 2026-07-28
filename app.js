@@ -867,9 +867,9 @@ function renderSocials() {
     const isEmail = s.url.startsWith("mailto:");
     const email   = s.url.replace("mailto:","");
     if (isEmail) {
-      return `<button class="social-btn" onclick="copySocial('${email}',this)" title="點擊複製">
+      return `<button type="button" class="social-btn" onclick="event.preventDefault();copySocial('${email}',this)" title="點擊複製 Email">
         <span class="social-icon">${s.icon}</span>
-        <span class="social-label">${s.label}</span>
+        <span class="social-label">${email}</span>
         <span class="social-copy-hint">點擊複製</span>
       </button>`;
     }
@@ -883,10 +883,29 @@ function renderSocials() {
 function copySocial(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
     const hint = btn.querySelector(".social-copy-hint");
-    if (hint) { hint.textContent = "已複製！"; setTimeout(()=>{ hint.textContent="點擊複製"; }, 2000); }
-  }).catch(() => toast("複製失敗，請手動複製"));
+    if (hint) {
+      hint.textContent = "✓ 已複製";
+      setTimeout(() => { hint.textContent = "點擊複製"; }, 2000);
+    }
+    toast("Email 已複製到剪貼簿");
+  }).catch(() => {
+    // 舊瀏覽器備用方案
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    const hint = btn.querySelector(".social-copy-hint");
+    if (hint) {
+      hint.textContent = "✓ 已複製";
+      setTimeout(() => { hint.textContent = "點擊複製"; }, 2000);
+    }
+    toast("Email 已複製到剪貼簿");
+  });
 }
-
 function openSocialModal() {
   document.getElementById("socialEditList").innerHTML=socials.map((s,i)=>`
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">

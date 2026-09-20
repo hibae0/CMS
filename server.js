@@ -24,6 +24,7 @@ async function connectDB() {
     console.log("✅ MongoDB 連線成功");
   } catch(e) {
     console.error("❌ MongoDB 連線失敗:", e.message);
+    // retry after 10s
     setTimeout(connectDB, 10000);
   }
 }
@@ -42,6 +43,7 @@ async function readData() {
 async function writeData(data) {
   if (!mongoReady || !db) return false;
   try {
+    // Remove _id from data to avoid conflict
     const { _id, ...clean } = data;
     await db.collection("sitedata").updateOne(
       { _id: "main" },
@@ -87,10 +89,9 @@ app.post("/api/site-data", async (req, res) => {
 });
 
 // ── 藍新金流設定 ──────────────────────────────
-// ⚠️ 建議改用環境變數，不要寫死在程式碼裡
-const MERCHANT_ID = process.env.NEWEBPAY_MERCHANT_ID || "MS1833659005";
-const HASH_KEY    = process.env.NEWEBPAY_HASH_KEY    || "";
-const HASH_IV     = process.env.NEWEBPAY_HASH_IV     || "";
+const MERCHANT_ID = "MS1833659005";
+const HASH_KEY    = "JrbUntegBSyPCnUuZUOdMBs8vwmZtJRL";
+const HASH_IV     = "PSDQfFKgOuHSulVC";
 const GATEWAY     = "https://core.newebpay.com/MPG/mpg_gateway";
 
 function aesEncrypt(str) {
@@ -112,8 +113,8 @@ const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbykxdcgcc4fdVa
 
 /**
  * 共用送出函式。payload 一定要帶 type：
- *   type:"order"   → 寫入「付款回報」分頁
- *   type:"booking" → 寫入「委託預約」分頁
+ *   type:"order"   → Apps Script 寫入付款回報分頁
+ *   type:"booking" → Apps Script 寫入委託預約分頁
  */
 async function postToGoogleSheet(payload) {
   if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("貼上")) return;
@@ -144,31 +145,35 @@ app.post("/api/submit-booking", async (req, res) => {
     return res.status(400).json({ ok:false, error:"缺少必要欄位" });
   }
 
-  // 每個欄位獨立送出，由 Apps Script 對應到各自的欄
-  await postToGoogleSheet({
-    type:         "booking",
-    orderNo:      "BK" + Date.now(),
-    date:         d.date || new Date().toLocaleString("zh-TW", { timeZone:"Asia/Taipei" }),
-    item:         d.item         || "",
-    nickname:     d.nickname     || "",
-    email:        d.email        || "",
-    sns:          d.sns          || "",
-    payment:      d.payment      || "",
-    deadline:     d.deadline     || "",
-    publish:      d.publish      || "",
-    agreeNonComm: d.agreeNonComm || "",
-    printPlan:    d.printPlan    || "",
-    buyout:       d.buyout       || "",
-    addon:        d.addon        || "",
-    wip:          d.wip          || "",
-    legalAge:     d.legalAge     || "",
-    agreeTerms:   d.agreeTerms   || "",
-    format:       d.format       || "",
-    character:    d.character    || "",
-    note:         d.note         || "",
-  });
-
-  res.json({ ok:true });
+  try {
+    // 每個欄位獨立送出，由 Apps Script 對應到各自的欄
+    await postToGoogleSheet({
+      type:         "booking",
+      orderNo:      "BK" + Date.now(),
+      date:         d.date || new Date().toLocaleString("zh-TW", { timeZone:"Asia/Taipei" }),
+      item:         d.item         || "",
+      nickname:     d.nickname     || "",
+      email:        d.email        || "",
+      sns:          d.sns          || "",
+      payment:      d.payment      || "",
+      deadline:     d.deadline     || "",
+      publish:      d.publish      || "",
+      agreeNonComm: d.agreeNonComm || "",
+      printPlan:    d.printPlan    || "",
+      buyout:       d.buyout       || "",
+      addon:        d.addon        || "",
+      wip:          d.wip          || "",
+      legalAge:     d.legalAge     || "",
+      agreeTerms:   d.agreeTerms   || "",
+      format:       d.format       || "",
+      character:    d.character    || "",
+      note:         d.note         || "",
+    });
+    res.json({ ok:true });
+  } catch(e) {
+    console.error("❌ 預約處理失敗:", e);
+    res.status(500).json({ ok:false, error:"伺服器處理失敗" });
+  }
 });
 
 // ── API: 建立付款 ─────────────────────────────
@@ -178,6 +183,7 @@ app.post("/api/create-payment", async (req, res) => {
     return res.status(400).json({ error: "缺少必要欄位" });
   }
   const amt = cart.reduce((sum, c) => {
+    // 有方案價格（variant）優先使用
     if (Number(c.variantPrice) > 0) return sum + Number(c.variantPrice) * c.qty;
     const p = products.find(x => x.id === c.id);
     if (!p) return sum;
@@ -250,9 +256,11 @@ app.post("/payment/return", (req, res) => {
 
 // ─── 藍新通知（背景） ──────────────────────────
 app.post("/payment/notify", (req, res) => {
+  // 先立刻回 200，避免藍新重試
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Cache-Control", "no-store");
   res.status(200).send("OK");
+  // 再非同步處理通知內容
   try {
     const tradeInfo = req.body.TradeInfo;
     if (!tradeInfo) return;
@@ -270,6 +278,10 @@ app.get("*", (req, res, next) => {
   }
   res.sendFile(path.join(__dirname, "index.html"));
 });
+
+// ─── 全域保護：單一錯誤不要讓整個服務掛掉 ───────
+process.on("unhandledRejection", err => console.error("⚠️ unhandledRejection:", err));
+process.on("uncaughtException",  err => console.error("⚠️ uncaughtException:", err));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {

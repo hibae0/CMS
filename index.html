@@ -335,9 +335,10 @@
   <div id="page-booking" class="page">
     <div class="booking-layout">
       <div class="booking-header">
-        <h2 class="section-heading italic">委託預約</h2>
-        <p class="booking-subtitle" id="bookingSubtitle">請選擇委託項目並填寫預約資料</p>
-      </div>
+  <h2 class="section-heading italic">委託預約</h2>
+  <p class="booking-subtitle" id="bookingSubtitle">請選擇委託項目並填寫預約資料</p>
+  <button class="edit-btn admin-only hidden" style="margin-top:8px" onclick="openBookingIntroModal()">✏ 編輯說明文字</button>
+</div>
 
       <!-- 管理員：名額設定 -->
       <div class="booking-slots-admin admin-only hidden">
@@ -347,6 +348,16 @@
         </div>
         <div id="slotAdminList" class="slot-admin-list"></div>
       </div>
+
+      <div id="bookingIntroModal" class="modal hidden"><div class="modal-box large">
+  <h3>編輯預約頁說明文字</h3>
+  <label>說明文字（可換行）</label>
+  <textarea id="editBookingIntro" style="min-height:100px"></textarea>
+  <div class="modal-actions">
+    <button onclick="saveBookingIntro()">儲存</button>
+    <button class="secondary" onclick="closeModal('bookingIntroModal')">取消</button>
+  </div>
+</div></div>
 
       <!-- 項目選擇 -->
       <div class="booking-section">

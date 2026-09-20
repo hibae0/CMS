@@ -128,25 +128,39 @@ async function sendToGoogleSheet(data) {
   }
 }
 
-// ── API：送出預約 ─────────────────────────
+// ── API：送出預約 ─────────────────────────────
 app.post("/api/submit-booking", async (req, res) => {
-  const data = req.body;
-  if (!data.nickname || !data.email || !data.item) {
+  const d = req.body || {};
+  if (!d.nickname || !d.email || !d.item) {
     return res.status(400).json({ ok:false, error:"缺少必要欄位" });
   }
-  // 同步到 Google 試算表
-  await sendToGoogleSheet({
-    orderNo:   "BK" + Date.now(),
-    date:      data.date,
-    buyerName: data.nickname,
-    buyerEmail:data.email,
-    buyerNote: `【預約】${data.item}｜付款：${data.payment}｜截稿：${data.deadline}｜公開：${data.publish}｜格式：${data.format}｜角色：${data.character}｜內容：${data.detail}｜服裝：${data.costume}｜背景：${data.bg}｜補充：${data.note}｜加購：${data.addon}｜買斷：${data.buyout}｜印製：${data.printPlan}｜WIP：${data.wip}｜SNS：${data.sns}`,
-    itemDesc:  `委託預約：${data.item}`,
-    amt:       0,
+ 
+  // 每個欄位獨立送出，由 Apps Script 對應到各自的欄
+  await postToGoogleSheet({
+    type:         "booking",
+    orderNo:      "BK" + Date.now(),
+    date:         d.date || new Date().toLocaleString("zh-TW", { timeZone:"Asia/Taipei" }),
+    item:         d.item         || "",
+    nickname:     d.nickname     || "",
+    email:        d.email        || "",
+    sns:          d.sns          || "",
+    payment:      d.payment      || "",
+    deadline:     d.deadline     || "",
+    publish:      d.publish      || "",
+    agreeNonComm: d.agreeNonComm || "",
+    printPlan:    d.printPlan    || "",
+    buyout:       d.buyout       || "",
+    addon:        d.addon        || "",
+    wip:          d.wip          || "",
+    legalAge:     d.legalAge     || "",
+    agreeTerms:   d.agreeTerms   || "",
+    format:       d.format       || "",
+    detail:       d.detail       || "",
+    note:         d.note         || "",
   });
+   
   res.json({ ok:true });
 });
-
 
 // ── API: 建立付款 ─────────────────────────────
 app.post("/api/create-payment", async (req, res) => {

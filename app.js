@@ -1159,9 +1159,9 @@ function deleteProject(id) {
   if (!confirm("確定刪除？")) return;
   projectList = projectList.filter(x=>x.id!==id);
   renderProjectList(); saveToServer(); toast("已刪除");
+}
 
-
-   // ── BOOKING ───────────────────────────────
+// ── BOOKING ───────────────────────────────
 
 function renderBookingPage() {
   renderBookingItems();
@@ -1211,7 +1211,7 @@ function renderBookingItems() {
 function renderSlotAdmin() {
   const el = document.getElementById("slotAdminList"); if (!el) return;
   el.innerHTML = commissions.map(c => {
-    const slot   = bookingSlots[c.id] || { quota:0, used:0 };
+    const slot = bookingSlots[c.id] || { quota:0, used:0 };
     return `<div class="slot-admin-row">
       <span class="slot-admin-name">${c.name}</span>
       <span class="slot-admin-stat">已用 ${slot.used||0} / ${slot.quota||0} 名</span>
@@ -1288,12 +1288,12 @@ async function submitBooking(e) {
   if (!selectedBookingId) { toast("請先選擇委託項目"); return; }
   const c = commissions.find(x=>x.id===selectedBookingId);
 
-  const deadline = document.querySelector('input[name="deadline"]:checked')?.value;
+  const deadline     = document.querySelector('input[name="deadline"]:checked')?.value || "";
   const deadlineDate = deadline==="指定日期" ? document.getElementById("bDeadlineDate").value : "";
-  const publish  = document.querySelector('input[name="publish"]:checked')?.value;
+  const publish      = document.querySelector('input[name="publish"]:checked')?.value || "";
   const publishDate  = publish==="指定日期"  ? document.getElementById("bPublishDate").value  : "";
-  const printPlan = document.querySelector('input[name="printPlan"]:checked')?.value;
-  const addon     = document.querySelector('input[name="addon"]:checked')?.value;
+  const printPlan    = document.querySelector('input[name="printPlan"]:checked')?.value || "";
+  const addon        = document.querySelector('input[name="addon"]:checked')?.value || "";
 
   const data = {
     item:       c?.name||"",
@@ -1312,9 +1312,9 @@ async function submitBooking(e) {
     agreeTerms: document.querySelector('input[name="agreeTerms"]:checked')?.value||"",
     format:     document.getElementById("bFormat").value.trim(),
     character:  document.getElementById("bCharacter").value.trim(),
-    detail:     document.getElementById("bDetail").value.trim(),
-    costume:    document.getElementById("bCostume").value.trim(),
-    bg:         document.getElementById("bBg").value.trim(),
+    detail:     document.getElementById("bDetail")?.value.trim()   || "",
+    costume:    document.getElementById("bCostume")?.value.trim()  || "",
+    bg:         document.getElementById("bBg")?.value.trim()       || "",
     note:       document.getElementById("bNote").value.trim(),
     date:       new Date().toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}),
   };
@@ -1354,11 +1354,11 @@ function resetBooking() {
     if (el.type==="radio"||el.type==="checkbox") el.checked=false;
     else el.value="";
   });
+  const btn = document.getElementById("bookingSubmitBtn");
+  if (btn) { btn.disabled = false; btn.textContent = "送出預約"; }
   document.getElementById("bDeadlineDate").style.display="none";
   document.getElementById("bPublishDate").style.display="none";
   document.getElementById("bPrintQty").style.display="none";
   document.getElementById("bAddonDetail").style.display="none";
   renderBookingItems();
 }
-}
- 

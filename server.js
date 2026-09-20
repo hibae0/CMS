@@ -258,9 +258,3 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`   http://0.0.0.0:${PORT}\n`);
 });
 
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n🎨 KANRI COMMISSION Server`);
-  console.log(`   http://0.0.0.0:${PORT}\n`);
-});

@@ -24,7 +24,6 @@ async function connectDB() {
     console.log("✅ MongoDB 連線成功");
   } catch(e) {
     console.error("❌ MongoDB 連線失敗:", e.message);
-    // retry after 10s
     setTimeout(connectDB, 10000);
   }
 }
@@ -43,7 +42,6 @@ async function readData() {
 async function writeData(data) {
   if (!mongoReady || !db) return false;
   try {
-    // Remove _id from data to avoid conflict
     const { _id, ...clean } = data;
     await db.collection("sitedata").updateOne(
       { _id: "main" },
@@ -89,9 +87,10 @@ app.post("/api/site-data", async (req, res) => {
 });
 
 // ── 藍新金流設定 ──────────────────────────────
-const MERCHANT_ID = "MS1833659005";
-const HASH_KEY    = "JrbUntegBSyPCnUuZUOdMBs8vwmZtJRL";
-const HASH_IV     = "PSDQfFKgOuHSulVC";
+// ⚠️ 建議改用環境變數，不要寫死在程式碼裡
+const MERCHANT_ID = process.env.NEWEBPAY_MERCHANT_ID || "MS1833659005";
+const HASH_KEY    = process.env.NEWEBPAY_HASH_KEY    || "";
+const HASH_IV     = process.env.NEWEBPAY_HASH_IV     || "";
 const GATEWAY     = "https://core.newebpay.com/MPG/mpg_gateway";
 
 function aesEncrypt(str) {
@@ -111,14 +110,19 @@ function aesDecrypt(encrypted) {
 // ── Google Sheet ──────────────────────────────
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbykxdcgcc4fdVazVSnDPBA64v2bMVHIvHvFOw6uqdU8fiuAnjrHbCm6Yk6K_GwOa2Ytcw/exec";
 
-async function sendToGoogleSheet(data) {
+/**
+ * 共用送出函式。payload 一定要帶 type：
+ *   type:"order"   → 寫入「付款回報」分頁
+ *   type:"booking" → 寫入「委託預約」分頁
+ */
+async function postToGoogleSheet(payload) {
   if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("貼上")) return;
   try {
-    console.log("📤 傳送訂單到 Google Sheet:", data.orderNo);
+    console.log(`📤 傳送 ${payload.type} 到 Google Sheet:`, payload.orderNo);
     const res = await fetch(GOOGLE_SHEET_URL, {
       method:"POST",
       headers:{"Content-Type":"text/plain"},
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
       redirect:"follow",
     });
     const text = await res.text();
@@ -128,13 +132,18 @@ async function sendToGoogleSheet(data) {
   }
 }
 
+// 訂單（付款）用
+async function sendToGoogleSheet(data) {
+  return postToGoogleSheet({ type: "order", ...data });
+}
+
 // ── API：送出預約 ─────────────────────────────
 app.post("/api/submit-booking", async (req, res) => {
   const d = req.body || {};
   if (!d.nickname || !d.email || !d.item) {
     return res.status(400).json({ ok:false, error:"缺少必要欄位" });
   }
- 
+
   // 每個欄位獨立送出，由 Apps Script 對應到各自的欄
   await postToGoogleSheet({
     type:         "booking",
@@ -155,10 +164,10 @@ app.post("/api/submit-booking", async (req, res) => {
     legalAge:     d.legalAge     || "",
     agreeTerms:   d.agreeTerms   || "",
     format:       d.format       || "",
-    detail:       d.detail       || "",
+    character:    d.character    || "",
     note:         d.note         || "",
   });
-   
+
   res.json({ ok:true });
 });
 
@@ -169,7 +178,6 @@ app.post("/api/create-payment", async (req, res) => {
     return res.status(400).json({ error: "缺少必要欄位" });
   }
   const amt = cart.reduce((sum, c) => {
-    // 有方案價格（variant）優先使用
     if (Number(c.variantPrice) > 0) return sum + Number(c.variantPrice) * c.qty;
     const p = products.find(x => x.id === c.id);
     if (!p) return sum;
@@ -187,7 +195,7 @@ app.post("/api/create-payment", async (req, res) => {
 
   const MerchantOrderNo = "KC" + Date.now();
   const TimeStamp = Math.floor(Date.now()/1000);
-console.log("🕐 TimeStamp:", TimeStamp, new Date().toISOString());
+  console.log("🕐 TimeStamp:", TimeStamp, new Date().toISOString());
   const host = `https://${req.get("host")}`;
 
   const tradeParams = [
@@ -242,11 +250,9 @@ app.post("/payment/return", (req, res) => {
 
 // ─── 藍新通知（背景） ──────────────────────────
 app.post("/payment/notify", (req, res) => {
-  // 先立刻回 200，避免藍新重試
   res.setHeader("Content-Type", "text/plain");
   res.setHeader("Cache-Control", "no-store");
   res.status(200).send("OK");
-  // 再非同步處理通知內容
   try {
     const tradeInfo = req.body.TradeInfo;
     if (!tradeInfo) return;
@@ -265,10 +271,8 @@ app.get("*", (req, res, next) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`\n🎨 KANRI COMMISSION Server`);
   console.log(`   http://0.0.0.0:${PORT}\n`);
 });
-

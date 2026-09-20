@@ -29,6 +29,7 @@ const DEFAULT_PROGRESS     = [];
 const DEFAULT_SOCIALS      = [{ id:"s1", label:"Email", url:"mailto:", icon:"@" }];
 const DEFAULT_CONNECT_BLOCKS = [{ id:"cb1", title:"委託來信規格", content:"請進入管理模式編輯內容" }];
 const DEFAULT_CONNECT_INTRO  = "請進入管理模式編輯說明文字";
+const DEFAULT_BOOKING_INTRO  = "請選擇委託項目並填寫預約資料";
 
 // ── STATE ─────────────────────────────────
 let isAdmin = false;
@@ -48,6 +49,7 @@ let connectIntro  = DEFAULT_CONNECT_INTRO;
 let todoList    = [];
 let projectList = [];
 let bookingSlots = {}; // { commissionId: { quota: 5, used: 0 } }
+let bookingIntro = DEFAULT_BOOKING_INTRO;
 let selectedBookingId = null;
 let cart          = JSON.parse(localStorage.getItem("kc_cart")) || [];
 
@@ -95,6 +97,7 @@ async function loadFromServer() {
     if (Array.isArray(data.todoList))     todoList     = data.todoList;
     if (Array.isArray(data.projectList))  projectList  = data.projectList;
     if (data.bookingSlots)                bookingSlots = data.bookingSlots;
+    if (data.bookingIntro)                bookingIntro = data.bookingIntro;
 
     console.log("✅ 資料載入成功");
   } catch(e) {
@@ -121,7 +124,7 @@ async function saveToServer() {
     const res = await fetch("/api/site-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingSlots }),
+      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingSlots, bookingIntro }),
     });
     const data = await res.json();
     if (!data.ok) console.warn("儲存回應異常:", data);
@@ -388,12 +391,12 @@ function saveCommission() {
   } else {
     commissions.push({ id:"c"+Date.now(), name, tags, summary, detail, img, imgs, priceType:pt, price, variants, status });
   }
-  renderCommissions(); renderProducts(); saveToServer(); closeModal("commissionModal"); toast("已儲存");
+  renderCommissions(); renderProducts(); renderBookingPage(); saveToServer(); closeModal("commissionModal"); toast("已儲存");
 }
 function deleteCommission(id) {
   if (!confirm("確定刪除？")) return;
   commissions = commissions.filter(x=>x.id!==id);
-  renderCommissions(); renderProducts(); saveToServer(); toast("已刪除");
+  renderCommissions(); renderProducts(); renderBookingPage(); saveToServer(); toast("已刪除");
 }
 
 // ── PROGRESS ──────────────────────────────
@@ -702,12 +705,12 @@ function checkout() {
   if (!name)  { toast("請填寫登記暱稱"); return; }
   if (!email) { toast("請填寫登記Email"); return; }
   if (!cart.length) { toast("購物車是空的"); return; }
-   // 清除無效的舊版 cart item（沒有對應商品的）
+  // 清除無效的舊版 cart item（沒有對應商品的）
   cart = cart.filter(ci => commissions.find(x => x.id === ci.id));
   save("kc_cart", cart);
   updateCartCount();
   if (!cart.length) { toast("購物車是空的，請重新加入商品"); return; }
-   
+
   if (cart.some(ci=>{ const p=commissions.find(x=>x.id===ci.id); return p&&p.priceType==="negotiate"; })) {
     toast("含有「洽談」商品，請先來信確認"); return;
   }
@@ -731,7 +734,7 @@ function checkout() {
   if (amt<1) { toast("訂單金額不得為 0"); return; }
   // 提醒顧客不要在頁面停留太久
   toast("正在建立付款，請勿重複點擊...");
-   fetch("/api/create-payment", {
+  fetch("/api/create-payment", {
     method:"POST", headers:{"Content-Type":"application/json"},
     body: JSON.stringify({ cart, buyerName:name, buyerEmail:email, buyerNote:note, products:commissions })
   }).then(r=>r.json()).then(data=>{
@@ -1164,8 +1167,27 @@ function deleteProject(id) {
 // ── BOOKING ───────────────────────────────
 
 function renderBookingPage() {
+  renderBookingIntro();
   renderBookingItems();
   renderSlotAdmin();
+}
+
+// 預約頁說明文字（可於管理模式編輯）
+function renderBookingIntro() {
+  const el = document.getElementById("bookingSubtitle"); if (!el) return;
+  el.innerHTML = (bookingIntro || "")
+    .split("\n")
+    .map(line => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+    .join("<br>");
+}
+function openBookingIntroModal() {
+  document.getElementById("editBookingIntro").value = bookingIntro;
+  openModal("bookingIntroModal");
+}
+function saveBookingIntro() {
+  bookingIntro = document.getElementById("editBookingIntro").value;
+  renderBookingIntro(); saveToServer();
+  closeModal("bookingIntroModal"); toast("已儲存");
 }
 
 function renderBookingItems() {
@@ -1334,7 +1356,7 @@ async function submitBooking(e) {
       document.getElementById("bookingFormWrap").classList.add("hidden");
       document.getElementById("bookingSuccess").classList.remove("hidden");
     } else {
-      toast("送出失敗，請稍後再試");
+      toast(result.error || "送出失敗，請稍後再試");
       btn.disabled=false; btn.textContent="送出預約";
     }
   } catch(err) {

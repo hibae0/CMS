@@ -109,7 +109,7 @@ function aesDecrypt(encrypted) {
 }
 
 // ── Google Sheet ──────────────────────────────
-const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbykxdcgcc4fdVazVSnDPBA64v2bMVHIvHvFOw6uqdU8fiuAnjrHbCm6Yk6K_GwOa2Ytcw/exec";
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbyCioEFpeH_bAOM4IpxCVFkHraifMd96JnVgyhezWP9tIWjWRKqXa3VFuLw7OuO84E_7w/exec";
 
 /**
  * 共用送出函式。payload 一定要帶 type：

@@ -94,7 +94,7 @@ async function loadFromServer() {
     if (data.connectIntro)                    connectIntro  = data.connectIntro;
     if (Array.isArray(data.todoList))     todoList     = data.todoList;
     if (Array.isArray(data.projectList))  projectList  = data.projectList;
-    if (data.bookingSlots) bookingSlots = data.bookingSlots;
+    if (data.bookingSlots)                bookingSlots = data.bookingSlots;
 
     console.log("✅ 資料載入成功");
   } catch(e) {
@@ -122,6 +122,7 @@ async function saveToServer() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingSlots }),
+    });
     const data = await res.json();
     if (!data.ok) console.warn("儲存回應異常:", data);
   } catch(e) {

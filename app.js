@@ -1311,7 +1311,7 @@ async function submitBooking(e) {
     legalAge:   document.querySelector('input[name="legalAge"]:checked')?.value||"",
     agreeTerms: document.querySelector('input[name="agreeTerms"]:checked')?.value||"",
     format:     document.getElementById("bFormat").value.trim(),
-    detail:     document.getElementById("bDetail")?.value.trim()   || "",
+    character:  document.getElementById("bCharacter").value.trim(),
     note:       document.getElementById("bNote").value.trim(),
     date:       new Date().toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}),
   };

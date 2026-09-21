@@ -331,189 +331,41 @@
     </div>
   </div>
 
-    <!-- ══ PAGE: BOOKING ══ -->
+  <!-- ══ PAGE: BOOKING ══ -->
   <div id="page-booking" class="page">
     <div class="booking-layout">
       <div class="booking-header">
-  <h2 class="section-heading italic">委託預約</h2>
-  <p class="booking-subtitle" id="bookingSubtitle">請選擇委託項目並填寫預約資料</p>
-  <button class="edit-btn admin-only hidden" style="margin-top:8px" onclick="openBookingIntroModal()">✏ 編輯說明文字</button>
-</div>
-
-      <!-- 管理員：名額設定 -->
-      <div class="booking-slots-admin admin-only hidden">
-        <div class="booking-admin-header">
-          <span class="booking-admin-label">名額管理</span>
-          <button class="add-block-btn" onclick="openSlotModal()">✏ 編輯名額</button>
-        </div>
-        <div id="slotAdminList" class="slot-admin-list"></div>
+        <h2 class="section-heading italic">委託預約</h2>
+        <p class="booking-subtitle" id="bookingSubtitle">請選擇委託項目並填寫預約資料</p>
+        <button class="edit-btn admin-only hidden" style="margin-top:8px" onclick="openBookingIntroModal()">✏ 編輯說明文字</button>
       </div>
 
       <div id="bookingIntroModal" class="modal hidden"><div class="modal-box large">
-  <h3>編輯預約頁說明文字</h3>
-  <label>說明文字（可換行）</label>
-  <textarea id="editBookingIntro" style="min-height:100px"></textarea>
-  <div class="modal-actions">
-    <button onclick="saveBookingIntro()">儲存</button>
-    <button class="secondary" onclick="closeModal('bookingIntroModal')">取消</button>
-  </div>
-</div></div>
+        <h3>編輯預約頁說明文字</h3>
+        <label>說明文字（可換行）</label>
+        <textarea id="editBookingIntro" style="min-height:100px"></textarea>
+        <div class="modal-actions">
+          <button onclick="saveBookingIntro()">儲存</button>
+          <button class="secondary" onclick="closeModal('bookingIntroModal')">取消</button>
+        </div>
+      </div></div>
 
-      <!-- 項目選擇 -->
+      <!-- 內嵌 Google 表單：請將下方 src 換成您自己的 Google 表單「已嵌入」連結 -->
+      <!-- 取得方式：Google 表單 → 傳送 → 內嵌 <> → 複製網址（?embedded=true 的那段） -->
       <div class="booking-section">
-        <h3 class="booking-section-title">選擇委託項目</h3>
-        <div id="bookingItems" class="booking-items"></div>
-      </div>
-
-      <!-- 表單 -->
-      <div id="bookingFormWrap" class="booking-form-wrap hidden">
         <h3 class="booking-section-title">填寫預約資料</h3>
-        <div class="booking-selected-item" id="bookingSelectedItem"></div>
-        <form class="booking-form" onsubmit="submitBooking(event)">
-          <div class="form-row">
-            <label class="form-label required">暱稱</label>
-            <input type="text" id="bNickname" class="form-input" placeholder="您的暱稱" required/>
-          </div>
-          <div class="form-row">
-            <label class="form-label">網址（備用SNS）</label>
-            <input type="text" id="bSNS" class="form-input" placeholder="https://..."/>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">Email</label>
-            <input type="email" id="bEmail" class="form-input" placeholder="your@email.com" required/>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">付款方式</label>
-            <select id="bPayment" class="form-input" required>
-              <option value="">請選擇</option>
-              <option value="匯款">匯款</option>
-              <option value="超商代碼">超商代碼</option>
-              <option value="Paypal">Paypal</option>
-            </select>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">截稿日期希望</label>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">
-                <input type="radio" name="deadline" value="依排單安排" onchange="toggleDeadlineInput(this.value)"> 依排單安排
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">
-                <input type="radio" name="deadline" value="指定日期" onchange="toggleDeadlineInput(this.value)"> 希望於
-              </label>
-              <input type="text" id="bDeadlineDate" class="form-input" placeholder="〇〇〇〇年〇〇月〇〇日" style="flex:1;min-width:180px;display:none"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">公開日期</label>
-            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-              <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">
-                <input type="radio" name="publish" value="交稿即可公開" onchange="togglePublishInput(this.value)"> 交稿即可公開
-              </label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:.84rem">
-                <input type="radio" name="publish" value="指定日期" onchange="togglePublishInput(this.value)"> 於
-              </label>
-              <input type="text" id="bPublishDate" class="form-input" placeholder="〇〇〇〇年〇〇月〇〇日之後公開" style="flex:1;min-width:180px;display:none"/>
-            </div>
-          </div>
-
-          <div class="form-divider"></div>
-
-          <div class="form-row">
-            <label class="form-label required">是否理解同意非商用使用範圍</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="agreeNonComm" value="是" required> 是</label>
-              <label><input type="radio" name="agreeNonComm" value="否"> 否</label>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">個人收藏是否有印製規劃需要</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="printPlan" value="否" required> 否</label>
-              <label><input type="radio" name="printPlan" value="是"> 是</label>
-              <input type="text" id="bPrintQty" class="form-input" placeholder="預估數量" style="width:120px;display:none"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">是否需要買斷不公開展示</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="buyout" value="否" required> 否</label>
-              <label><input type="radio" name="buyout" value="是"> 是</label>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">是否需要加購</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="addon" value="否" required> 否</label>
-              <label><input type="radio" name="addon" value="是"> 是</label>
-              <input type="text" id="bAddonDetail" class="form-input" placeholder="表情差分/服裝設計稿/背景人物檔案/印刷排版設計" style="flex:1;display:none"/>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">是否同意繪者張貼未完成稿</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="wip" value="是" required> 是</label>
-              <label><input type="radio" name="wip" value="否"> 否</label>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">是否為中華民國民法規定之完全行為能力人</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="legalAge" value="是" required> 是</label>
-              <label><input type="radio" name="legalAge" value="否"> 否</label>
-            </div>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">是否瞭解委託交易權益及自行承擔責任</label>
-            <div class="form-radio-group">
-              <label><input type="radio" name="agreeTerms" value="是" required> 是</label>
-              <label><input type="radio" name="agreeTerms" value="否"> 否</label>
-            </div>
-          </div>
-
-          <div class="form-divider"></div>
-
-          <div class="form-row">
-            <label class="form-label required">委託格式要求</label>
-            <input type="text" id="bFormat" class="form-input" placeholder="橫/直式/繪者發揮＿尺寸〇〇〇〇＊〇〇〇〇" required/>
-          </div>
-          <div class="form-row">
-            <label class="form-label required">委託角色設定＋詳細需求</label>
-            <textarea id="bCharacter" class="form-input form-textarea" placeholder="角色設定、服裝，背景需求等，請提供詳細設定與資料" required></textarea>
-          </div>
-          <div class="form-row">
-            <label class="form-label">補充</label>
-            <textarea id="bNote" class="form-input form-textarea" placeholder="其他補充說明..."></textarea>
-          </div>
-
-          <div class="form-submit-row">
-            <button type="button" class="booking-back-btn" onclick="closeBookingForm()">← 返回選擇項目</button>
-            <button type="submit" class="booking-submit-btn" id="bookingSubmitBtn">送出預約</button>
-          </div>
-        </form>
-      </div>
-
-      <!-- 送出成功 -->
-      <div id="bookingSuccess" class="booking-success hidden">
-        <div class="booking-success-icon">✓</div>
-        <h3>預約已送出！</h3>
-        <p>感謝您的委託預約，我們會在確認後盡快與您聯繫。</p>
-        <button class="add-to-cart-sm" onclick="resetBooking()">返回預約頁</button>
+        <div class="google-form-embed">
+          <iframe
+            src="https://docs.google.com/forms/d/e/請替換成您的表單ID/viewform?embedded=true"
+            width="100%" height="1400" frameborder="0" marginheight="0" marginwidth="0">
+            載入中…
+          </iframe>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Slot Modal -->
-  <div id="slotModal" class="modal hidden"><div class="modal-box large">
-    <h3>編輯各項目名額</h3>
-    <p style="font-size:.78rem;color:var(--muted);margin-bottom:14px">設定每個委託項目本月開放名額，設為 0 表示該項目不開放預約</p>
-    <div id="slotEditList"></div>
-    <div class="modal-actions">
-      <button onclick="saveSlots()">儲存</button>
-      <button class="secondary" onclick="closeModal('slotModal')">取消</button>
-    </div>
-  </div></div>
-  
-<!-- ══ PAGE: DASHBOARD ══ -->
+  <!-- ══ PAGE: DASHBOARD ══ -->
   <div id="page-dashboard" class="page">
     <div class="dashboard-layout">
 

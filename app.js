@@ -48,9 +48,7 @@ let connectBlocks = DEFAULT_CONNECT_BLOCKS;
 let connectIntro  = DEFAULT_CONNECT_INTRO;
 let todoList    = [];
 let projectList = [];
-let bookingSlots = {}; // { commissionId: { quota: 5, used: 0 } }
 let bookingIntro = DEFAULT_BOOKING_INTRO;
-let selectedBookingId = null;
 let cart          = JSON.parse(localStorage.getItem("kc_cart")) || [];
 
 let editingHomeBlockId  = null;
@@ -96,7 +94,6 @@ async function loadFromServer() {
     if (data.connectIntro)                    connectIntro  = data.connectIntro;
     if (Array.isArray(data.todoList))     todoList     = data.todoList;
     if (Array.isArray(data.projectList))  projectList  = data.projectList;
-    if (data.bookingSlots)                bookingSlots = data.bookingSlots;
     if (data.bookingIntro)                bookingIntro = data.bookingIntro;
 
     console.log("✅ 資料載入成功");
@@ -124,7 +121,7 @@ async function saveToServer() {
     const res = await fetch("/api/site-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingSlots, bookingIntro }),
+      body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingIntro }),
     });
     const data = await res.json();
     if (!data.ok) console.warn("儲存回應異常:", data);
@@ -801,7 +798,8 @@ function openLightbox(id) {
   document.getElementById("lightboxName").textContent=c.name;
   document.getElementById("lightboxStatus").innerHTML=`<span class="comm-status ${sc}">${sl}</span>`;
   document.getElementById("lightboxPrice").textContent=priceLabel;
-  document.getElementById("lightboxDetail").innerHTML=`<ul>${(c.detail||"").split("\n").filter(Boolean).map(l=>`<li>${l}</li>`).join("")}</ul>`;
+  // 詳細內容：每行一條，不使用項目符號（純文字段落）
+  document.getElementById("lightboxDetail").innerHTML=(c.detail||"").split("\n").filter(l=>l.trim()).map(l=>`<p>${l}</p>`).join("");
   const cartBtn=document.getElementById("lightboxCartBtn");
   cartBtn.style.display=c.status==="closed"?"none":"block";
 
@@ -1165,11 +1163,11 @@ function deleteProject(id) {
 }
 
 // ── BOOKING ───────────────────────────────
+// 預約頁只保留說明文字（上半部）；下半部改為內嵌 Google 表單，
+// 由 index.html 直接以 <iframe> 嵌入，不再需要 JS 產生選項/表單/送出邏輯。
 
 function renderBookingPage() {
   renderBookingIntro();
-  renderBookingItems();
-  renderSlotAdmin();
 }
 
 // 預約頁說明文字（可於管理模式編輯）
@@ -1188,196 +1186,4 @@ function saveBookingIntro() {
   bookingIntro = document.getElementById("editBookingIntro").value;
   renderBookingIntro(); saveToServer();
   closeModal("bookingIntroModal"); toast("已儲存");
-}
-
-function renderBookingItems() {
-  const el = document.getElementById("bookingItems"); if (!el) return;
-  const available = commissions.filter(c => c.status !== "closed");
-  if (!available.length) {
-    el.innerHTML = `<p style="font-size:.84rem;color:var(--muted)">目前無開放預約項目</p>`;
-    return;
-  }
-  el.innerHTML = available.map(c => {
-    const slot    = bookingSlots[c.id] || { quota:0, used:0 };
-    const quota   = slot.quota || 0;
-    const used    = slot.used  || 0;
-    const remain  = Math.max(0, quota - used);
-    const full    = quota > 0 && remain <= 0;
-    const noSlot  = quota === 0;
-    const imgs    = c.imgs&&c.imgs.length ? c.imgs : (c.img?[c.img]:[]);
-    const imgHtml = imgs[0]
-      ? `<img src="${imgs[0]}" class="booking-item-img" alt="${c.name}"/>`
-      : `<div class="booking-item-img-placeholder">🎨</div>`;
-    const statusHtml = noSlot
-      ? `<span class="booking-slot-badge slot-none">未開放</span>`
-      : full
-        ? `<span class="booking-slot-badge slot-full">已額滿</span>`
-        : `<span class="booking-slot-badge slot-open">剩餘 ${remain} 名</span>`;
-    const btnHtml = (!noSlot && !full)
-      ? `<button class="booking-select-btn" onclick="selectBookingItem('${c.id}')">填寫預約 →</button>`
-      : `<button class="booking-select-btn" disabled>${full?"已額滿":"未開放"}</button>`;
-    return `<div class="booking-item-card ${full||noSlot?"booking-item-disabled":""}">
-      ${imgHtml}
-      <div class="booking-item-info">
-        <div class="booking-item-name">${c.name}</div>
-        <div class="booking-item-summary">${c.summary||""}</div>
-        <div class="booking-item-footer">
-          ${statusHtml}
-          ${btnHtml}
-        </div>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function renderSlotAdmin() {
-  const el = document.getElementById("slotAdminList"); if (!el) return;
-  el.innerHTML = commissions.map(c => {
-    const slot = bookingSlots[c.id] || { quota:0, used:0 };
-    return `<div class="slot-admin-row">
-      <span class="slot-admin-name">${c.name}</span>
-      <span class="slot-admin-stat">已用 ${slot.used||0} / ${slot.quota||0} 名</span>
-      <button class="edit-btn" onclick="openSlotModal('${c.id}')">編輯</button>
-    </div>`;
-  }).join("");
-}
-
-function openSlotModal(focusId) {
-  const el = document.getElementById("slotEditList");
-  el.innerHTML = commissions.map(c => {
-    const slot = bookingSlots[c.id] || { quota:0, used:0 };
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px;background:var(--off);border-radius:8px;border:1px solid var(--border)">
-      <span style="flex:1;font-size:.84rem;font-weight:500">${c.name}</span>
-      <label style="font-size:.76rem;color:var(--muted)">名額</label>
-      <input type="number" id="slotQuota_${c.id}" value="${slot.quota||0}" min="0" style="width:60px;border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:.84rem;outline:none"/>
-      <label style="font-size:.76rem;color:var(--muted)">已用</label>
-      <input type="number" id="slotUsed_${c.id}" value="${slot.used||0}" min="0" style="width:60px;border:1px solid var(--border2);border-radius:6px;padding:5px 8px;font-size:.84rem;outline:none"/>
-    </div>`;
-  }).join("");
-  openModal("slotModal");
-}
-
-function saveSlots() {
-  commissions.forEach(c => {
-    const q = parseInt(document.getElementById("slotQuota_"+c.id)?.value)||0;
-    const u = parseInt(document.getElementById("slotUsed_"+c.id)?.value)||0;
-    bookingSlots[c.id] = { quota:q, used:u };
-  });
-  renderBookingPage();
-  saveToServer();
-  closeModal("slotModal");
-  toast("名額已儲存");
-}
-
-function selectBookingItem(id) {
-  const c = commissions.find(x=>x.id===id); if (!c) return;
-  const slot   = bookingSlots[id] || { quota:0, used:0 };
-  const remain = Math.max(0, (slot.quota||0) - (slot.used||0));
-  if (remain <= 0) { toast("此項目已額滿"); return; }
-  selectedBookingId = id;
-  document.getElementById("bookingSelectedItem").innerHTML = `
-    <span class="booking-selected-tag">${c.name}</span>
-    <span class="booking-slot-badge slot-open" style="margin-left:8px">剩餘 ${remain} 名</span>`;
-  document.getElementById("bookingFormWrap").classList.remove("hidden");
-  document.getElementById("bookingFormWrap").scrollIntoView({ behavior:"smooth" });
-}
-
-function closeBookingForm() {
-  selectedBookingId = null;
-  document.getElementById("bookingFormWrap").classList.add("hidden");
-  document.getElementById("bookingItems").scrollIntoView({ behavior:"smooth" });
-}
-
-function toggleDeadlineInput(val) {
-  document.getElementById("bDeadlineDate").style.display = val==="指定日期"?"block":"none";
-}
-function togglePublishInput(val) {
-  document.getElementById("bPublishDate").style.display = val==="指定日期"?"block":"none";
-}
-
-// 印製數量、加購欄位聯動
-document.addEventListener("change", e => {
-  if (e.target.name==="printPlan") {
-    document.getElementById("bPrintQty").style.display = e.target.value==="是"?"inline-block":"none";
-  }
-  if (e.target.name==="addon") {
-    document.getElementById("bAddonDetail").style.display = e.target.value==="是"?"inline-block":"none";
-  }
-});
-
-async function submitBooking(e) {
-  e.preventDefault();
-  if (!selectedBookingId) { toast("請先選擇委託項目"); return; }
-  const c = commissions.find(x=>x.id===selectedBookingId);
-
-  const deadline     = document.querySelector('input[name="deadline"]:checked')?.value || "";
-  const deadlineDate = deadline==="指定日期" ? document.getElementById("bDeadlineDate").value : "";
-  const publish      = document.querySelector('input[name="publish"]:checked')?.value || "";
-  const publishDate  = publish==="指定日期"  ? document.getElementById("bPublishDate").value  : "";
-  const printPlan    = document.querySelector('input[name="printPlan"]:checked')?.value || "";
-  const addon        = document.querySelector('input[name="addon"]:checked')?.value || "";
-
-  const data = {
-    item:       c?.name||"",
-    nickname:   document.getElementById("bNickname").value.trim(),
-    sns:        document.getElementById("bSNS").value.trim(),
-    email:      document.getElementById("bEmail").value.trim(),
-    payment:    document.getElementById("bPayment").value,
-    deadline:   deadline==="指定日期" ? deadlineDate : deadline,
-    publish:    publish==="指定日期"  ? publishDate  : publish,
-    agreeNonComm: document.querySelector('input[name="agreeNonComm"]:checked')?.value||"",
-    printPlan:  printPlan==="是" ? `是（${document.getElementById("bPrintQty").value}）` : "否",
-    buyout:     document.querySelector('input[name="buyout"]:checked')?.value||"",
-    addon:      addon==="是" ? `是（${document.getElementById("bAddonDetail").value}）` : "否",
-    wip:        document.querySelector('input[name="wip"]:checked')?.value||"",
-    legalAge:   document.querySelector('input[name="legalAge"]:checked')?.value||"",
-    agreeTerms: document.querySelector('input[name="agreeTerms"]:checked')?.value||"",
-    format:     document.getElementById("bFormat").value.trim(),
-    character:  document.getElementById("bCharacter").value.trim(),
-    note:       document.getElementById("bNote").value.trim(),
-    date:       new Date().toLocaleString("zh-TW",{timeZone:"Asia/Taipei"}),
-  };
-
-  const btn = document.getElementById("bookingSubmitBtn");
-  btn.disabled = true; btn.textContent = "送出中...";
-
-  try {
-    const res  = await fetch("/api/submit-booking", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify(data),
-    });
-    const result = await res.json();
-    if (result.ok) {
-      // 扣除名額
-      if (!bookingSlots[selectedBookingId]) bookingSlots[selectedBookingId]={ quota:0, used:0 };
-      bookingSlots[selectedBookingId].used = (bookingSlots[selectedBookingId].used||0) + 1;
-      await saveToServer();
-      renderBookingPage();
-      document.getElementById("bookingFormWrap").classList.add("hidden");
-      document.getElementById("bookingSuccess").classList.remove("hidden");
-    } else {
-      toast(result.error || "送出失敗，請稍後再試");
-      btn.disabled=false; btn.textContent="送出預約";
-    }
-  } catch(err) {
-    toast("網路錯誤，請稍後再試");
-    btn.disabled=false; btn.textContent="送出預約";
-  }
-}
-
-function resetBooking() {
-  selectedBookingId = null;
-  document.getElementById("bookingSuccess").classList.add("hidden");
-  document.getElementById("bookingFormWrap").classList.add("hidden");
-  document.querySelectorAll(".booking-form input, .booking-form textarea, .booking-form select").forEach(el=>{
-    if (el.type==="radio"||el.type==="checkbox") el.checked=false;
-    else el.value="";
-  });
-  const btn = document.getElementById("bookingSubmitBtn");
-  if (btn) { btn.disabled = false; btn.textContent = "送出預約"; }
-  document.getElementById("bDeadlineDate").style.display="none";
-  document.getElementById("bPublishDate").style.display="none";
-  document.getElementById("bPrintQty").style.display="none";
-  document.getElementById("bAddonDetail").style.display="none";
-  renderBookingItems();
 }

@@ -33,7 +33,8 @@ const DEFAULT_BOOKING_INTRO  = "請選擇委託項目並填寫預約資料";
 
 // ── STATE ─────────────────────────────────
 let isAdmin = false;
-const ADMIN_PASSWORD = "toshine10171108";
+let adminToken = "";          // 後端登入後給的通行證（不再把密碼寫在前端）
+let fullDataLoaded = false;   // 是否已用管理員身分載入完整資料
 
 let profile       = { ...DEFAULT_PROFILE };
 let homeBlocks    = DEFAULT_HOME_BLOCKS;
@@ -70,7 +71,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadFromServer() {
   try {
-    const res  = await fetch("/api/site-data");
+    const res  = await fetch("/api/site-data", {
+      headers: adminToken ? { "Authorization": "Bearer " + adminToken } : {},
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
 
     // 只有伺服器有值才覆蓋，絕對不用預設值覆蓋伺服器資料
@@ -100,6 +104,7 @@ async function loadFromServer() {
     if (data.bookingIntro)                bookingIntro = data.bookingIntro;
 
     dataLoaded = true;
+    fullDataLoaded = data._admin === true;
     console.log("✅ 資料載入成功");
   } catch(e) {
     console.warn("⚠️ 無法從伺服器載入資料，使用預設值:", e.message);
@@ -121,18 +126,23 @@ function renderAll() {
 }
 
 async function saveToServer() {
-  if (!dataLoaded) {
-    toast("資料尚未成功載入，已阻止儲存以保護現有資料");
+  if (!dataLoaded || !fullDataLoaded) {
+    toast("尚未以管理員身分完整載入資料，已阻止儲存以保護現有資料");
     return;
   }
   try {
     const res = await fetch("/api/site-data", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + adminToken },
       body: JSON.stringify({ profile, homeBlocks, noticesHome, noticesComm, noticesPay, atten, commissions, progressList, socials, connectBlocks, connectIntro, todoList, projectList, bookingIntro }),
     });
+    if (res.status === 401) {
+      toast("登入已過期，請重新登入管理模式（剛才的修改尚未儲存）");
+      if (isAdmin) toggleAdmin();
+      return;
+    }
     const data = await res.json();
-    if (!data.ok) console.warn("儲存回應異常:", data);
+    if (!data.ok) { console.warn("儲存回應異常:", data); toast("儲存失敗，請稍後再試"); }
   } catch(e) {
     console.error("❌ 儲存失敗:", e.message);
   }
@@ -508,13 +518,18 @@ function queryProgress() {
   const email  = document.getElementById("progressQueryEmail").value.trim().toLowerCase();
   const result = document.getElementById("progressQueryResult");
   if (!email) { result.innerHTML=`<p class="progress-empty">請輸入 Email</p>`; return; }
-  fetch("/api/site-data").then(r=>r.json()).then(data=>{
-    if (Array.isArray(data.progressList)) progressList = data.progressList;
-    _doQueryProgress(email, result);
-  }).catch(()=>_doQueryProgress(email, result));
+  result.innerHTML=`<p class="progress-empty">查詢中…</p>`;
+  fetch("/api/progress-query", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  }).then(async r => {
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) { result.innerHTML=`<p class="progress-empty">${data.error||"查詢失敗，請稍後再試"}</p>`; return; }
+    _renderQueryResult(data.matches||[], result);
+  }).catch(()=>{ result.innerHTML=`<p class="progress-empty">查詢失敗，請稍後再試</p>`; });
 }
-function _doQueryProgress(email, result) {
-  const matches = progressList.filter(p=>(p.email||"").trim().toLowerCase()===email);
+function _renderQueryResult(matches, result) {
   if (!matches.length) { result.innerHTML=`<p class="progress-empty">找不到符合的委託記錄，請確認 Email 是否正確</p>`; return; }
   result.innerHTML = matches.map(p=>`<div class="progress-result-card">
     <div class="progress-result-name">${p.name} · ${p.service||""}</div>
@@ -797,6 +812,9 @@ function checkout() {
 function toggleAdmin() {
   if (isAdmin) {
     isAdmin=false;
+    if (adminToken) fetch("/api/admin-logout", { method:"POST", headers:{ "Authorization":"Bearer "+adminToken } }).catch(()=>{});
+    adminToken=""; fullDataLoaded=false;
+    progressList=[]; todoList=[]; projectList=[]; // 登出後清掉私人資料
     document.getElementById("adminToggleBtn").classList.remove("active");
     document.getElementById("adminToggleBtn").textContent="管理";
     document.querySelectorAll(".admin-only").forEach(el=>el.classList.add("hidden"));
@@ -806,16 +824,35 @@ function toggleAdmin() {
     setTimeout(()=>document.getElementById("adminPasswordInput").focus(),50);
   }
 }
-function checkAdminPassword() {
+async function checkAdminPassword() {
   const val=document.getElementById("adminPasswordInput").value;
-  if (val===ADMIN_PASSWORD) {
-    isAdmin=true; closeModal("adminModal");
-    document.getElementById("adminPasswordInput").value="";
-    document.getElementById("adminToggleBtn").classList.add("active");
-    document.getElementById("adminToggleBtn").textContent="退出管理";
-    document.querySelectorAll(".admin-only").forEach(el=>el.classList.remove("hidden"));
-    renderAll(); toast("歡迎，管理員 👋");
-  } else { toast("密碼錯誤"); }
+  try {
+    const res  = await fetch("/api/admin-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: val }),
+    });
+    const data = await res.json().catch(()=>({}));
+    if (res.status === 429) { toast(data.error || "嘗試次數過多，請稍後再試"); return; }
+    if (!res.ok || !data.ok) { toast("密碼錯誤"); return; }
+    adminToken = data.token;
+  } catch(e) {
+    toast("登入失敗，請稍後再試");
+    return;
+  }
+  // 用管理員身分重新載入完整資料（含進度表、待辦、專案）
+  await loadFromServer();
+  if (!fullDataLoaded) {
+    adminToken = "";
+    toast("載入管理資料失敗，請重新整理後再試");
+    return;
+  }
+  isAdmin=true; closeModal("adminModal");
+  document.getElementById("adminPasswordInput").value="";
+  document.getElementById("adminToggleBtn").classList.add("active");
+  document.getElementById("adminToggleBtn").textContent="退出管理";
+  document.querySelectorAll(".admin-only").forEach(el=>el.classList.remove("hidden"));
+  renderAll(); toast("歡迎，管理員 👋");
 }
 
 // ── MODALS ────────────────────────────────

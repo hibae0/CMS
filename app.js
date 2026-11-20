@@ -58,6 +58,9 @@ let editingNoticeType   = "home";
 let editingConnectId    = null;
 let editingConnectIsIntro = false;
 
+// 【新增】資料是否成功從伺服器載入；沒載入成功時禁止儲存，避免預設值覆蓋伺服器資料
+let dataLoaded = false;
+
 // ── INIT ──────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
   await loadFromServer();
@@ -96,6 +99,7 @@ async function loadFromServer() {
     if (Array.isArray(data.projectList))  projectList  = data.projectList;
     if (data.bookingIntro)                bookingIntro = data.bookingIntro;
 
+    dataLoaded = true;
     console.log("✅ 資料載入成功");
   } catch(e) {
     console.warn("⚠️ 無法從伺服器載入資料，使用預設值:", e.message);
@@ -117,6 +121,10 @@ function renderAll() {
 }
 
 async function saveToServer() {
+  if (!dataLoaded) {
+    toast("資料尚未成功載入，已阻止儲存以保護現有資料");
+    return;
+  }
   try {
     const res = await fetch("/api/site-data", {
       method: "POST",
@@ -396,9 +404,17 @@ function deleteCommission(id) {
   renderCommissions(); renderProducts(); renderBookingPage(); saveToServer(); toast("已刪除");
 }
 
-// ── PROGRESS ──────────────────────────────
+// ── PROGRESS (Waiting List) ───────────────
 
-// 排序：ETA → 手動順序（沒調整過則依付款狀態）
+// 標籤 / 樣式對照（全域，管理表格與查詢結果共用）
+const payLabel  = v=>({paid:"已付款",deposit:"已付訂金",outstanding:"待付款"}[v]||v);
+const statLabel = v=>({not_started:"未開始",in_progress:"進行中",completed:"已完成",paused:"暫停/取消"}[v]||v);
+const payBadge  = v=>({paid:"prog-paid",deposit:"prog-deposit",outstanding:"prog-outstanding"}[v]||"prog-outstanding");
+const statBadge = v=>({not_started:"prog-not-started",in_progress:"prog-in-progress",completed:"prog-completed",paused:"prog-paused"}[v]||"prog-not-started");
+
+// 排序規則：
+//   1. ETA 由早到晚（無法解析的日期排最後）
+//   2. ETA 相同時：有手動調整過（order）的依 order；沒調整過的依 已付款 → 已付訂金 → 待付款
 function progressCompare(a, b) {
   const toTime = s => {
     const d = new Date((s || "").trim().replace(/\//g, "-"));
@@ -414,10 +430,11 @@ function progressCompare(a, b) {
   const rank = p => ({ paid: 0, deposit: 1, outstanding: 2 }[p.payment] ?? 3);
   const oa = a.order != null ? a.order : 1000 + rank(a);
   const ob = b.order != null ? b.order : 1000 + rank(b);
-  return oa - ob;
+  if (oa !== ob) return oa - ob;
+  return String(a.id).localeCompare(String(b.id)); // 最後用 id 固定順序，避免跳動
 }
 
-// 手動上下移動（只會在「ETA 相同」的項目之間移動）
+// 手動上下移動（只會在「ETA 相同」且同為進行中/已結案的項目之間移動）
 function moveProgress(id, dir) {
   const p = progressList.find(x => x.id === id); if (!p) return;
   const isDone = s => s === "completed" || s === "paused";
@@ -434,8 +451,10 @@ function moveProgress(id, dir) {
 }
 
 function renderProgressAdmin() {
+  // 對應 index.html 的 <div id="progressAdminTable">
+  const el = document.getElementById("progressAdminTable");
+  if (!el) return;
 
-  // 依 ETA → 手動順序/付款狀態 排序
   const sortByETA = list => [...list].sort(progressCompare);
 
   // 分成進行中 / 已完成暫停
@@ -497,10 +516,6 @@ function queryProgress() {
 function _doQueryProgress(email, result) {
   const matches = progressList.filter(p=>(p.email||"").trim().toLowerCase()===email);
   if (!matches.length) { result.innerHTML=`<p class="progress-empty">找不到符合的委託記錄，請確認 Email 是否正確</p>`; return; }
-  const payLabel  = v=>({paid:"已付款",deposit:"已付訂金",outstanding:"待付款"}[v]||v);
-  const statLabel = v=>({not_started:"未開始",in_progress:"進行中",completed:"已完成",paused:"暫停/取消"}[v]||v);
-  const payBadge  = v=>({paid:"prog-paid",deposit:"prog-deposit",outstanding:"prog-outstanding"}[v]||"prog-outstanding");
-  const statBadge = v=>({not_started:"prog-not-started",in_progress:"prog-in-progress",completed:"prog-completed",paused:"prog-paused"}[v]||"prog-not-started");
   result.innerHTML = matches.map(p=>`<div class="progress-result-card">
     <div class="progress-result-name">${p.name} · ${p.service||""}</div>
     <div class="progress-result-row">
@@ -549,16 +564,23 @@ function saveProgress() {
   if (!name||!email) { toast("請填寫登記暱稱與 Email"); return; }
   if (editingProgressId) {
     const i = progressList.findIndex(x=>x.id===editingProgressId);
-    if (i!==-1) progressList[i]={ ...progressList[i], name, email, service, payment, status, eta, amt, acd, note };
+    if (i!==-1) {
+      const old = progressList[i];
+      // ETA 改變後，舊的手動順序不再適用，清除後回到自動排序（ETA → 付款狀態）
+      const keepOrder = (old.eta||"").trim() === eta;
+      const updated = { ...old, name, email, service, payment, status, eta, amt, acd, note };
+      if (!keepOrder) delete updated.order;
+      progressList[i] = updated;
+    }
   } else {
     progressList.push({ id:"p"+Date.now(), name, email, service, payment, status, eta, amt, acd, note });
   }
-  renderProgressAdmin(); saveToServer(); closeModal("progressModal"); toast("已儲存");
+  renderProgressAdmin(); renderDashboard(); saveToServer(); closeModal("progressModal"); toast("已儲存");
 }
 function deleteProgress(id) {
   if (!confirm("確定刪除？")) return;
   progressList = progressList.filter(x=>x.id!==id);
-  renderProgressAdmin(); saveToServer(); toast("已刪除");
+  renderProgressAdmin(); renderDashboard(); saveToServer(); toast("已刪除");
 }
 
 // ── PAYMENT PAGE ──────────────────────────

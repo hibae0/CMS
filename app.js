@@ -397,22 +397,46 @@ function deleteCommission(id) {
 }
 
 // ── PROGRESS ──────────────────────────────
+
+// 排序：ETA → 手動順序（沒調整過則依付款狀態）
+function progressCompare(a, b) {
+  const toTime = s => {
+    const d = new Date((s || "").trim().replace(/\//g, "-"));
+    return isNaN(d) ? Infinity : d.getTime();
+  };
+  const ta = toTime(a.eta), tb = toTime(b.eta);
+  if (ta !== tb) return ta < tb ? -1 : 1;
+  // 兩者 ETA 都無法解析時，用文字比較避免交錯
+  if (ta === Infinity) {
+    const c = (a.eta || "").localeCompare(b.eta || "");
+    if (c !== 0) return c;
+  }
+  const rank = p => ({ paid: 0, deposit: 1, outstanding: 2 }[p.payment] ?? 3);
+  const oa = a.order != null ? a.order : 1000 + rank(a);
+  const ob = b.order != null ? b.order : 1000 + rank(b);
+  return oa - ob;
+}
+
+// 手動上下移動（只會在「ETA 相同」的項目之間移動）
+function moveProgress(id, dir) {
+  const p = progressList.find(x => x.id === id); if (!p) return;
+  const isDone = s => s === "completed" || s === "paused";
+  const group = progressList
+    .filter(x => (x.eta || "").trim() === (p.eta || "").trim() && isDone(x.status) === isDone(p.status))
+    .sort(progressCompare);
+  const i = group.findIndex(x => x.id === id);
+  const j = i + dir;
+  if (j < 0 || j >= group.length) { toast(dir < 0 ? "已經是最前面" : "已經是最後面"); return; }
+  [group[i], group[j]] = [group[j], group[i]];
+  group.forEach((x, k) => { x.order = k + 1; });
+  renderProgressAdmin();
+  saveToServer();
+}
+
 function renderProgressAdmin() {
-  const el = document.getElementById("progressAdminTable"); if (!el) return;
-  if (!progressList.length) { el.innerHTML=`<p style="font-size:.8rem;color:var(--muted)">尚無進度資料</p>`; return; }
 
-  const payBadge  = v=>({paid:"prog-paid",deposit:"prog-deposit",outstanding:"prog-outstanding"}[v]||"prog-outstanding");
-  const statBadge = v=>({not_started:"prog-not-started",in_progress:"prog-in-progress",completed:"prog-completed",paused:"prog-paused"}[v]||"prog-not-started");
-  const payLabel  = v=>({paid:"已付款",deposit:"已付訂金",outstanding:"待付款"}[v]||v);
-  const statLabel = v=>({not_started:"未開始",in_progress:"進行中",completed:"已完成",paused:"暫停/取消"}[v]||v);
-
-  // 依 ETA 排序（無日期排最後）
-  const sortByETA = list => [...list].sort((a,b)=>{
-    if (!a.eta && !b.eta) return 0;
-    if (!a.eta) return 1;
-    if (!b.eta) return -1;
-    return new Date(a.eta) - new Date(b.eta);
-  });
+  // 依 ETA → 手動順序/付款狀態 排序
+  const sortByETA = list => [...list].sort(progressCompare);
 
   // 分成進行中 / 已完成暫停
   const active    = sortByETA(progressList.filter(p => p.status !== "completed" && p.status !== "paused"));
@@ -427,7 +451,9 @@ function renderProgressAdmin() {
     <td style="font-size:.78rem">${p.eta||""}</td>
     <td style="font-size:.78rem;color:var(--muted)">${p.acd||""}</td>
     <td style="font-size:.75rem;color:var(--muted)">${p.note||""}</td>
-    <td><div class="prog-row-actions">
+     <td><div class="prog-row-actions">
+      <button class="edit-btn" onclick="moveProgress('${p.id}',-1)" title="往上移">▲</button>
+      <button class="edit-btn" onclick="moveProgress('${p.id}',1)" title="往下移">▼</button>
       <button class="edit-btn" onclick="openEditProgress('${p.id}')">✏</button>
       <button class="del-btn" onclick="deleteProgress('${p.id}')">✕</button>
     </div></td>
